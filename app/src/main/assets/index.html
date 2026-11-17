@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>SportXP – Simulation</title>
+<style>
+  @font-face{font-family:"Barlow Condensed";font-weight:600;src:url(fonts/BarlowCondensed-SemiBold.ttf)}
+  @font-face{font-family:"Barlow Condensed";font-weight:700;src:url(fonts/BarlowCondensed-Bold.ttf)}
+  @font-face{font-family:"Barlow Condensed";font-weight:800;src:url(fonts/BarlowCondensed-ExtraBold.ttf)}
+  @font-face{font-family:"Nunito";font-weight:200 1000;src:url(fonts/Nunito-Variable.ttf)}
+  :root{
+    --ink:#17233F;      /* bleu nuit : texte, bandeau */
+    --ink-2:#2A3A60;
+    --flame:#FF6B1A;    /* action principale, série */
+    --flame-d:#D9530A;
+    --volt:#FFC93C;     /* XP */
+    --mint:#22B573;     /* réussite */
+    --chalk:#EEF1F6;    /* fond */
+    --line:#DCE1EA;
+    --mute:#6B768C;
+    --red:#E5484D;
+    --card:#FFFFFF;
+    --display:"Barlow Condensed",system-ui,sans-serif;
+    --body:"Nunito",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--body);background:#C9D1DE;color:var(--ink);min-height:100vh;display:flex;gap:32px;justify-content:center;align-items:flex-start;padding:28px 16px;flex-wrap:wrap}
+  button{font-family:inherit;color:inherit}
+  :focus-visible{outline:3px solid var(--flame);outline-offset:2px}
+  .ico{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  .ico.fill{fill:currentColor;stroke:none}
+
+  /* ---------------- panneau de simulation ---------------- */
+  .panel{width:340px;background:#fff;border-radius:20px;padding:22px;box-shadow:0 12px 40px rgba(23,35,63,.18)}
+  .panel h1{font-family:var(--display);font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:.2px}
+  .panel .sub{color:var(--mute);font-size:13.5px;margin:0 0 16px;line-height:1.45}
+  .clock{background:var(--ink);color:#fff;border-radius:14px;padding:14px;text-align:center;margin-bottom:12px}
+  .clock .d{font-size:14px;opacity:.75;text-transform:capitalize}
+  .clock .t{font-family:var(--display);font-size:52px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .pbtn{border:1.5px solid var(--line);border-radius:12px;padding:10px;font-weight:700;font-size:14px;cursor:pointer;background:#fff}
+  .pbtn:hover{border-color:var(--ink)}
+  .pbtn.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+  .pbtn.warn{color:var(--red)}
+  .next{font-size:13.5px;background:var(--chalk);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5}
+  .log{max-height:280px;overflow:auto;border-top:1px solid var(--line);padding-top:8px}
+  .log h3{font-size:14px;margin:4px 0 6px;color:var(--mute)}
+  .log div{font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--line);line-height:1.4}
+  .log .tm{color:var(--mute);font-variant-numeric:tabular-nums;margin-right:6px}
+
+  /* ---------------- téléphone ---------------- */
+  .phone{width:380px;height:790px;background:#0E1526;border-radius:48px;padding:11px;box-shadow:0 24px 60px rgba(23,35,63,.45);position:relative;flex-shrink:0}
+  .screen{width:100%;height:100%;background:var(--chalk);border-radius:38px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+  .status{height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;font-weight:800;flex-shrink:0}
+  .screen.dark-top .status{background:var(--ink);color:#fff}
+  .content{flex:1;overflow-y:auto;overflow-x:hidden}
+  .pad{padding:16px}
+  .nav{display:flex;background:#fff;border-top:1px solid var(--line);flex-shrink:0;padding:6px 6px 12px}
+  .nav button{flex:1;border:0;background:none;padding:6px 0 2px;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:3px}
+  .nav button.on{color:var(--ink)}
+  .nav button.on .ico{color:var(--flame)}
+
+  /* bandeau du jour */
+  .hero{background:var(--ink);color:#fff;padding:6px 18px 20px;position:relative;border-radius:0 0 26px 26px}
+  .hero .top{display:flex;justify-content:space-between;align-items:center}
+  .streak{display:flex;align-items:center;gap:8px}
+  .streak .num{font-family:var(--display);font-size:64px;font-weight:800;line-height:.9}
+  .streak .lbl{font-size:14px;font-weight:700;opacity:.8;line-height:1.15}
+  .streak .ico{width:40px;height:40px;color:var(--flame)}
+  .streak.cold .ico{color:#5A6A8E}
+  .pills{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .pill{display:inline-flex;align-items:center;gap:5px;background:var(--ink-2);border-radius:20px;padding:4px 10px 4px 7px;font-weight:800;font-size:13px}
+  .pill .ico{width:16px;height:16px}
+  .pill.xp .ico{color:var(--volt)}
+  .pill.jk .ico{color:#7FB2FF}
+  .lvl{margin-top:12px;font-size:13px;font-weight:700;opacity:.9;display:flex;justify-content:space-between}
+  .bar{height:8px;background:var(--ink-2);border-radius:4px;overflow:hidden;margin-top:6px}
+  .bar>div{height:100%;background:var(--volt);border-radius:4px;transition:width .6s}
+  .week{display:flex;justify-content:space-between;margin-top:16px}
+  .wd{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;font-weight:700;opacity:.85;width:38px}
+  .wd .dot{width:30px;height:30px;border-radius:50%;border:2px solid #3B4C74;display:flex;align-items:center;justify-content:center}
+  .wd .dot.rest{border-style:dashed;border-color:#3B4C74}
+  .wd .dot.done{background:var(--flame);border-color:var(--flame)}
+  .wd .dot.joker{background:#7FB2FF;border-color:#7FB2FF}
+  .wd .dot .ico{width:16px;height:16px;color:#fff}
+  .wd.today{opacity:1}
+  .wd.today .dot{box-shadow:0 0 0 3px var(--ink),0 0 0 5px #fff}
+
+  /* coach */
+  .coach{display:flex;align-items:flex-end;gap:6px;margin:12px 16px 10px;position:relative}
+  .coach .m{flex-shrink:0;width:78px}
+  .bub{background:#fff;border-radius:18px 18px 18px 4px;padding:11px 13px;font-size:14.5px;font-weight:600;line-height:1.38;box-shadow:0 2px 0 var(--line);margin-bottom:8px}
+  .coach.plain{margin:0 0 14px}
+
+  /* séance */
+  .sess{background:#fff;border-radius:22px;padding:16px;margin:0 16px 14px;box-shadow:0 2px 0 var(--line)}
+  .sess .kind{font-size:13px;font-weight:700;color:var(--mute)}
+  .sess h2{font-family:var(--display);font-size:36px;font-weight:800;margin:0;line-height:1}
+  .meta{display:flex;gap:14px;margin:8px 0 6px;font-size:13px;font-weight:700;color:var(--mute);flex-wrap:wrap}
+  .meta span{display:inline-flex;align-items:center;gap:4px}
+  .meta .ico{width:16px;height:16px}
+  .diff{display:inline-flex;gap:2px;align-items:flex-end}
+  .diff i{width:4px;border-radius:1px;background:var(--line)}
+  .diff i:nth-child(1){height:6px}.diff i:nth-child(2){height:10px}.diff i:nth-child(3){height:14px}
+  .diff i.on{background:var(--flame)}
+  .exr{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--chalk);cursor:pointer}
+  .exr:first-of-type{border-top:0}
+  .exr .mb{width:30px;flex-shrink:0}
+  .exr .n{font-weight:800;font-size:15px;line-height:1.2}
+  .exr .a{font-size:13px;color:var(--mute);font-weight:600}
+  .exr .go{color:var(--mute)}
+  .seg{display:flex;background:var(--chalk);border-radius:12px;padding:3px;margin:4px 0 10px}
+  .seg button{flex:1;border:0;background:none;border-radius:10px;padding:7px;font-weight:800;font-size:13px;cursor:pointer;color:var(--mute)}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 0 var(--line)}
+  .cta{width:100%;height:56px;border:0;border-radius:16px;background:var(--flame);color:#fff;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 var(--flame-d);display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--body)}
+  .cta:active{transform:translateY(2px);box-shadow:0 2px 0 var(--flame-d)}
+  .cta:disabled{background:#C8CFDB;box-shadow:0 4px 0 #AEB7C6;cursor:not-allowed}
+  .cta.ink{background:var(--ink);box-shadow:0 4px 0 #0A1226}
+  .cta.ghost{background:#fff;color:var(--ink);box-shadow:0 4px 0 var(--line);border:1.5px solid var(--line)}
+  .note{font-size:13px;color:var(--mute);text-align:center;margin:10px 16px 18px;font-weight:600}
+  .done-banner{display:flex;gap:10px;align-items:center;background:#E3F7EE;color:#106B44;border-radius:14px;padding:10px 12px;font-weight:700;font-size:14px;margin-bottom:10px}
+  .done-banner .ico{color:var(--mint)}
+
+  /* écrans génériques */
+  h1.t{font-family:var(--display);font-size:34px;font-weight:800;margin:4px 0 2px;line-height:1}
+  .lead{color:var(--mute);font-size:14.5px;margin:4px 0 14px;line-height:1.45;font-weight:600}
+  .sec{font-family:var(--display);font-weight:800;font-size:22px;margin:20px 0 8px}
+  .card{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 2px 0 var(--line)}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1;min-width:0}
+  .small{font-size:13px;color:var(--mute);font-weight:600}
+  .switch{width:48px;height:28px;border-radius:14px;background:#C8CFDB;position:relative;cursor:pointer;flex-shrink:0;border:0;transition:background .2s}
+  .switch::after{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s}
+  .switch.on{background:var(--mint)}.switch.on::after{left:23px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:7px 11px;font-size:13.5px;font-weight:700;cursor:pointer}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .daybtns{display:flex;gap:5px}
+  .daybtns button{flex:1;height:40px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:800;cursor:pointer;font-size:14px}
+  .daybtns button.on{background:var(--flame);border-color:var(--flame);color:#fff}
+  .lnk{color:var(--ink);font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-size:13.5px;background:none;border:0;padding:0}
+  .plan{display:flex;flex-direction:column;gap:6px}
+  .plan .pd{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:9px 12px;box-shadow:0 1px 0 var(--line)}
+  .plan .pd b{width:34px;font-family:var(--display);font-size:18px}
+  .plan .pd.rest{background:transparent;box-shadow:none;border:1.5px dashed var(--line);color:var(--mute)}
+  .why{background:#FFF3E8;border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.5;font-weight:600;color:#5B3416;margin-top:10px}
+  .lib{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--chalk);cursor:pointer}
+  .slot{display:flex;align-items:center;gap:8px;background:var(--chalk);border-radius:10px;padding:6px 6px 6px 10px;margin-top:6px}
+  .slot .hrs{font-weight:800;font-variant-numeric:tabular-nums;font-size:14px}
+  .x{border:0;background:#fff;color:var(--red);border-radius:8px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .x .ico{width:16px;height:16px}
+  .tag{font-size:11px;background:#FFE3CF;color:#9A3F06;border-radius:6px;padding:1px 6px;font-weight:800;margin-left:4px}
+  .paused{opacity:.5}
+
+  /* onboarding */
+  .dots{display:flex;gap:5px;margin:6px 0 14px}.dots span{flex:1;height:6px;border-radius:3px;background:var(--line)}.dots span.on{background:var(--flame)}
+  .back{display:inline-flex;align-items:center;gap:2px;border:0;background:none;font-weight:800;color:var(--mute);cursor:pointer;padding:0;margin-bottom:6px;font-size:14px}
+  .back .ico{width:18px;height:18px}
+  .pick2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 18px}
+  .pickc{border:2px solid var(--line);background:#fff;border-radius:20px;padding:14px 8px 12px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;text-align:center;font-size:14px}
+  .pickc b{font-size:15.5px}
+  .pickc.on{border-color:var(--flame);box-shadow:0 3px 0 var(--flame)}
+  .opt{display:flex;gap:12px;align-items:center;border:2px solid var(--line);background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;cursor:pointer;width:100%;text-align:left}
+  .opt.on{border-color:var(--flame);box-shadow:0 3px 0 var(--flame)}
+  .opt b{font-size:16px;display:block}
+  .opt .gl{width:42px;height:42px;border-radius:12px;background:var(--chalk);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .opt.on .gl{background:#FFE3CF;color:var(--flame-d)}
+  .sexfig{height:120px}
+  .mz{cursor:pointer;transition:fill .15s}
+  .mz:hover{fill:#8E99AB}
+  .mz.on:hover{fill:var(--flame-d)}
+
+  /* calques */
+  .overlay{position:absolute;inset:0;background:rgba(14,21,38,.45);display:flex;align-items:flex-end;z-index:10}
+  .overlay.center{align-items:center;padding:20px}
+  .sheet{background:#fff;border-radius:26px 26px 0 0;padding:10px 18px 22px;width:100%;max-height:88%;overflow:auto;animation:up .25s ease-out}
+  .sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 10px}
+  @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+  .dlg{background:#fff;border-radius:26px;padding:22px;width:100%;max-height:90%;overflow:auto}
+  .dlg h3,.sheet h3{font-family:var(--display);font-size:28px;font-weight:800;margin:0 0 10px;line-height:1}
+  .fld label{font-size:13px;color:var(--mute);display:block;margin:12px 0 5px;font-weight:700}
+  .fld input{width:100%;padding:11px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;font-family:inherit;font-weight:600}
+  .acts{display:flex;gap:8px;margin-top:18px}
+  .acts .cta{height:48px;font-size:16px}
+  .err{color:var(--red);font-size:13px;margin-top:6px;font-weight:700}
+  .video{background:var(--ink);border-radius:18px;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#fff;text-align:center;padding:16px;position:relative;overflow:hidden}
+  .video .play{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center}
+  .video .play .ico{width:28px;height:28px}
+  .src{font-size:12.5px;color:var(--mute);font-weight:700;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+  .src a{color:var(--ink)}
+
+  /* mode séance */
+  .player{position:absolute;inset:0;background:#fff;z-index:12;display:flex;flex-direction:column}
+  .player .ph{display:flex;align-items:center;gap:10px;padding:44px 16px 8px}
+  .player .prog{display:flex;gap:3px;flex:1}
+  .player .prog i{flex:1;height:5px;border-radius:3px;background:var(--line)}
+  .player .prog i.on{background:var(--flame)}
+  .player .close{border:0;background:var(--chalk);width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .player .body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 22px;text-align:center}
+  .player .count{font-size:14px;font-weight:800;color:var(--mute)}
+  .player .bigfig{height:210px;margin:6px 0 10px}
+  .player h2{font-family:var(--display);font-size:38px;font-weight:800;margin:0;line-height:1}
+  .player .amt{font-family:var(--display);font-size:72px;font-weight:800;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums}
+  .player .amt small{font-size:28px;color:var(--mute)}
+  .player .foot{padding:16px 16px 26px;display:flex;flex-direction:column;gap:10px}
+  .player.rest{background:var(--ink);color:#fff}
+  .player.rest .count{color:#A9B6D3}
+  .player.rest .close{background:var(--ink-2);color:#fff}
+  .ring{width:190px;height:190px;position:relative;margin:10px 0}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:64px;font-weight:800}
+  .finish{position:absolute;inset:0;background:var(--ink);color:#fff;z-index:13;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;overflow:hidden}
+  .finish .xp{font-family:var(--display);font-size:84px;font-weight:800;color:var(--volt);line-height:1}
+  .finish p{font-size:16px;font-weight:700;margin:6px 0}
+  .confetti{position:absolute;width:8px;height:14px;top:-20px;border-radius:2px;animation:fall 2.2s ease-in forwards}
+  @keyframes fall{to{transform:translateY(820px) rotate(540deg);opacity:.8}}
+  @media (prefers-reduced-motion: reduce){.confetti{display:none}.sheet{animation:none}}
+
+  /* notification */
+  .notif{position:absolute;top:40px;left:10px;right:10px;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(14,21,38,.3);padding:12px 14px;z-index:20;cursor:pointer;transform:translateY(-260px);visibility:hidden;transition:transform .35s ease,visibility .35s}
+  .notif.show{transform:translateY(0);visibility:visible}
+  .notif .app{font-size:12px;color:var(--mute);font-weight:700}
+  .notif .ti{font-weight:800;font-size:15px;margin-top:2px}
+  .notif .tx{font-size:13.5px;margin-top:2px;font-weight:600}
+  .toast{position:absolute;bottom:92px;left:14px;right:14px;background:var(--ink);color:#fff;border-radius:14px;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.4;z-index:26;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .toast button{color:var(--volt);background:none;border:0;font-weight:800;cursor:pointer;padding:0;margin-left:6px;text-decoration:underline}
+  .lib.off .grow{opacity:.5;text-decoration:line-through}
+  .goals{display:grid;grid-template-columns:1.25fr 1fr;gap:10px;margin:0 16px 18px}
+  .gcard{background:#fff;border-radius:18px;padding:12px;box-shadow:0 2px 0 var(--line);border:0;text-align:left;cursor:pointer;font-family:inherit;color:inherit}
+  .gcard .gt{font-weight:800;font-size:14px;margin-bottom:6px}
+  .chestrow{display:flex;align-items:center;gap:4px;margin-bottom:4px}
+  .chestrow i,.chestprog i{width:14px;height:14px;border-radius:50%;background:var(--line);display:block}
+  .chestrow i.on{background:var(--flame)}
+  .ringw{display:flex;align-items:center;gap:8px;margin-bottom:2px}.ringw b{font-family:var(--display);font-size:26px}
+  .mapov{position:absolute;inset:0;background:var(--ink);z-index:12;display:flex;flex-direction:column;color:#fff}
+  .maphd{display:flex;align-items:center;gap:12px;padding:44px 16px 12px}
+  .maphd .close{border:0;background:var(--ink-2);color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .mapsc{flex:1;overflow-y:auto}
+  .mapin{position:relative;width:336px;margin:0 auto}
+  .mappath{position:absolute;left:0;top:0}
+  .node{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:#2A3A60;border:3px solid #3B4C74;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:18px;color:#7D8BAE}
+  .node.done{background:var(--flame);border-color:#FF9A5C;color:#fff}
+  .node.chest{width:58px;height:58px;margin:-29px 0 0 -29px;background:#22325A;border-color:var(--volt)}
+  .node.chest.done{background:#3B4C74}
+  .node.here{box-shadow:0 0 0 5px rgba(255,107,26,.35)}
+  .node .ico{width:22px;height:22px;color:#fff}
+  .nlbl{position:absolute;transform:translateX(-50%);font-size:11.5px;font-weight:800;color:var(--volt);white-space:nowrap}
+  .mapme{position:absolute;transform:translateX(-50%);animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}
+  .blines{width:100%;max-width:270px;margin:8px 0 4px}
+  .bl{display:flex;justify-content:space-between;font-weight:700;font-size:15px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.12);opacity:0;animation:blin .35s ease-out forwards}
+  .bl b{color:var(--volt)}
+  @keyframes blin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .lvup{background:var(--volt);color:var(--ink);font-weight:800;border-radius:12px;padding:6px 12px;margin:8px 0 4px;animation:pop .5s cubic-bezier(.3,1.6,.5,1) 1.2s both}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+  .chestprog{display:flex;align-items:center;gap:5px;margin-top:10px}
+  .chestprog i{background:#3B4C74}.chestprog i.on{background:var(--flame)}
+  .chestbtn{border:0;background:none;cursor:pointer;animation:wiggle 1.2s ease-in-out infinite;padding:10px}
+  @keyframes wiggle{0%,100%{transform:rotate(0)}20%{transform:rotate(-6deg)}40%{transform:rotate(6deg)}60%{transform:rotate(-3deg)}80%{transform:rotate(0)}}
+  .pcheer{background:#FFF3E8;color:#9A3F06;font-weight:800;font-size:13.5px;border-radius:10px;padding:5px 10px;margin-top:6px}
+  @media (prefers-reduced-motion: reduce){.bl,.lvup{animation:none;opacity:1}.chestbtn,.mapme{animation:none}}
+  /* présentation par la mascotte */
+  .stage{position:relative;height:220px;margin:4px 0 6px}
+  .stage .im{position:absolute;bottom:0;left:var(--from,50%);transform:translateX(-50%);transition:left .6s cubic-bezier(.3,1.4,.5,1)}
+  .stage .im.flip svg{transform:scaleX(-1)}
+  .stage .art{position:absolute;top:18px}
+  .islide h2{font-family:var(--display);font-size:32px;font-weight:800;margin:6px 0 6px;line-height:1.02}
+  .islide p{font-size:15.5px;line-height:1.5;font-weight:600;color:#3D4A66;margin:0 0 18px}
+  .mock{background:#fff;border-radius:16px;box-shadow:0 2px 0 var(--line);padding:10px 12px;font-weight:800;display:flex;gap:8px;align-items:center}
+  .hop{animation:hop .5s ease-out}
+  @keyframes hop{0%{transform:translateY(0)}35%{transform:translateY(-14px)}70%{transform:translateY(2px)}100%{transform:none}}
+
+  /* visite guidée */
+  .tour{position:absolute;inset:11px;border-radius:38px;overflow:hidden;z-index:30}
+  .tour[hidden]{display:none}
+  .tour .spot{position:absolute;border-radius:16px;box-shadow:0 0 0 1600px rgba(14,21,38,.72);transition:all .45s cubic-bezier(.4,0,.2,1);pointer-events:none}
+  .tour .spot.none{box-shadow:0 0 0 1600px rgba(14,21,38,.82)}
+  .tgrp{position:absolute;left:12px;right:12px;display:flex;align-items:flex-end;gap:6px;transition:top .45s cubic-bezier(.4,0,.2,1)}
+  .tgrp.rev{flex-direction:row-reverse}
+  .tgrp.rev .tm svg{transform:scaleX(-1)}
+  .tgrp .tm{flex-shrink:0;width:84px}
+  .tgrp .tb{flex:1;background:#fff;border-radius:18px;padding:12px 13px 10px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .tgrp .tt{font-size:14.5px;font-weight:700;line-height:1.42}
+  .tnav{display:flex;align-items:center;gap:10px;margin-top:10px}
+  .tnav .tc{flex:1;text-align:center;font-size:12px;font-weight:800;color:var(--mute)}
+  .tnav .cta{height:38px;width:auto;padding:0 16px;font-size:14.5px;border-radius:12px;box-shadow:0 3px 0 var(--flame-d)}
+  @media (prefers-reduced-motion: reduce){.stage .im,.tgrp,.tour .spot{transition:none}.hop{animation:none}}
+  @media (max-width:760px){.phone{transform:scale(.92);transform-origin:top center}}
+
+  /* ---------------- mode appli (APK) ---------------- */
+  body.app{padding:0;display:block;background:var(--chalk);min-height:0;-webkit-tap-highlight-color:transparent;user-select:none}
+  body.app .phone{width:100%;height:100vh;height:100dvh;border-radius:0;padding:0;box-shadow:none;background:var(--chalk);transform:none}
+  body.app .screen{border-radius:0}
+  body.app .tour{inset:0;border-radius:0}
+  body.app .status{height:var(--sat,24px);padding:0;font-size:0}
+  body.app .nav{padding-bottom:calc(8px + var(--sab,0px))}
+  body.app .player .ph,body.app .maphd{padding-top:calc(14px + var(--sat,24px))}
+  body.app .player .foot{padding-bottom:calc(20px + var(--sab,0px))}
+  body.app .notif{top:calc(8px + var(--sat,24px))}
+  body.app .toast{bottom:calc(84px + var(--sab,0px))}
+  body.app input{user-select:text}
+</style>
+</head>
+<body class="app">
+
+<div class="phone"><div class="screen" id="screen"></div><div class="tour" id="tour" hidden></div></div>
+
+
+<script>
+(() => {
+// Dans l'APK, la page tourne dans une WebView qui expose window.Android. « #app » permet de tester ce mode dans un navigateur.
+const APP = !!window.Android || location.hash === "#app";
+const NATIVE = window.Android || null;
+if (APP) document.body.classList.add("app");
+let VNOW = null;   // horloge virtuelle utilisée pour calculer les notifications à venir
+const MUSCLES = [{"id": "chest", "name": "Pectoraux", "views": ["front"]}, {"id": "shoulders", "name": "Épaules", "views": ["front", "back"]}, {"id": "biceps", "name": "Biceps", "views": ["front"]}, {"id": "forearms", "name": "Avant-bras", "views": ["front", "back"]}, {"id": "abs", "name": "Abdominaux", "views": ["front"]}, {"id": "obliques", "name": "Obliques", "views": ["front"]}, {"id": "quads", "name": "Quadriceps", "views": ["front"]}, {"id": "calves", "name": "Mollets", "views": ["front", "back"]}, {"id": "traps", "name": "Trapèzes", "views": ["back"]}, {"id": "lats", "name": "Dos (dorsaux)", "views": ["back"]}, {"id": "lowerback", "name": "Lombaires", "views": ["back"]}, {"id": "triceps", "name": "Triceps", "views": ["back"]}, {"id": "glutes", "name": "Fessiers", "views": ["back"]}, {"id": "hamstrings", "name": "Ischio-jambiers", "views": ["back"]}];
+const EXERCISES = [{"muscle": "chest", "name": "Pompes contre un mur", "en": "wall push up", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "chest", "name": "Pompes sur les genoux", "en": "knee push up", "eq": "B", "base": 10, "sec": false, "suf": "", "diff": 1}, {"muscle": "chest", "name": "Pompes mains surélevées", "en": "incline push up", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "chest", "name": "Pompes", "en": "push up", "eq": "B", "base": 10, "sec": false, "suf": "", "diff": 2}, {"muscle": "chest", "name": "Pompes pieds surélevés", "en": "decline push up", "eq": "B", "base": 8, "sec": false, "suf": "", "diff": 3}, {"muscle": "chest", "name": "Développé haltères au sol", "en": "dumbbell floor press", "eq": "D", "base": 10, "sec": false, "suf": "", "diff": 1}, {"muscle": "chest", "name": "Écartés haltères au sol", "en": "dumbbell floor fly", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "shoulders", "name": "Cercles de bras", "en": "arm circles", "eq": "B", "base": 30, "sec": true, "suf": "", "diff": 1}, {"muscle": "shoulders", "name": "Planche + touches d'épaule", "en": "plank shoulder tap", "eq": "B", "base": 16, "sec": false, "suf": "", "diff": 2}, {"muscle": "shoulders", "name": "Pompes piquées (pike)", "en": "pike push up", "eq": "B", "base": 8, "sec": false, "suf": "", "diff": 3}, {"muscle": "shoulders", "name": "Élévations latérales", "en": "dumbbell lateral raise", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "shoulders", "name": "Élévations frontales", "en": "dumbbell front raise", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "shoulders", "name": "Développé épaules haltères", "en": "dumbbell overhead press", "eq": "D", "base": 10, "sec": false, "suf": "", "diff": 2}, {"muscle": "biceps", "name": "Curl isométrique avec serviette", "en": "towel bicep curl", "eq": "B", "base": 30, "sec": true, "suf": "", "diff": 1}, {"muscle": "biceps", "name": "Rowing inversé sous une table", "en": "inverted row", "eq": "B", "base": 8, "sec": false, "suf": "", "diff": 3}, {"muscle": "biceps", "name": "Curl haltères", "en": "dumbbell curl", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "biceps", "name": "Curl marteau", "en": "dumbbell hammer curl", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "biceps", "name": "Curl concentré", "en": "dumbbell concentration curl", "eq": "D", "base": 10, "sec": false, "suf": " par bras", "diff": 2}, {"muscle": "forearms", "name": "Essorer une serviette", "en": "towel wring", "eq": "B", "base": 30, "sec": true, "suf": "", "diff": 1}, {"muscle": "forearms", "name": "Pompes sur les poings", "en": "knuckle push up", "eq": "B", "base": 8, "sec": false, "suf": "", "diff": 3}, {"muscle": "forearms", "name": "Curl poignets haltère", "en": "dumbbell wrist curl", "eq": "D", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "forearms", "name": "Curl poignets inversé", "en": "dumbbell reverse wrist curl", "eq": "D", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "forearms", "name": "Marche du fermier", "en": "dumbbell farmer carry", "eq": "D", "base": 40, "sec": true, "suf": "", "diff": 2}, {"muscle": "abs", "name": "Crunchs", "en": "crunch", "eq": "B", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "abs", "name": "Dead bug", "en": "dead bug", "eq": "B", "base": 10, "sec": false, "suf": " par côté", "diff": 1}, {"muscle": "abs", "name": "Gainage sur les genoux", "en": "knee plank", "eq": "B", "base": 20, "sec": true, "suf": "", "diff": 1}, {"muscle": "abs", "name": "Gainage (planche)", "en": "plank", "eq": "B", "base": 30, "sec": true, "suf": "", "diff": 2}, {"muscle": "abs", "name": "Relevés de jambes", "en": "lying leg raise", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "abs", "name": "Mountain climbers", "en": "mountain climber", "eq": "B", "base": 20, "sec": false, "suf": "", "diff": 2}, {"muscle": "abs", "name": "Crunch avec haltère", "en": "dumbbell weighted crunch", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "obliques", "name": "Gainage latéral sur les genoux", "en": "knee side plank", "eq": "B", "base": 15, "sec": true, "suf": " par côté", "diff": 1}, {"muscle": "obliques", "name": "Crunch vélo", "en": "bicycle crunch", "eq": "B", "base": 20, "sec": false, "suf": "", "diff": 2}, {"muscle": "obliques", "name": "Russian twist", "en": "russian twist", "eq": "B", "base": 20, "sec": false, "suf": "", "diff": 2}, {"muscle": "obliques", "name": "Gainage latéral", "en": "side plank", "eq": "B", "base": 20, "sec": true, "suf": " par côté", "diff": 2}, {"muscle": "obliques", "name": "Flexion latérale haltère", "en": "dumbbell side bend", "eq": "D", "base": 12, "sec": false, "suf": " par côté", "diff": 1}, {"muscle": "obliques", "name": "Russian twist haltère", "en": "dumbbell russian twist", "eq": "D", "base": 16, "sec": false, "suf": "", "diff": 3}, {"muscle": "quads", "name": "Squats sur une chaise", "en": "chair squat", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "quads", "name": "Squats", "en": "bodyweight squat", "eq": "B", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "quads", "name": "Chaise contre le mur", "en": "wall sit", "eq": "B", "base": 30, "sec": true, "suf": "", "diff": 1}, {"muscle": "quads", "name": "Fentes avant", "en": "forward lunge", "eq": "B", "base": 10, "sec": false, "suf": " par jambe", "diff": 2}, {"muscle": "quads", "name": "Squats sautés", "en": "jump squat", "eq": "B", "base": 10, "sec": false, "suf": "", "diff": 3}, {"muscle": "quads", "name": "Goblet squat", "en": "dumbbell goblet squat", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "quads", "name": "Fentes haltères", "en": "dumbbell lunge", "eq": "D", "base": 10, "sec": false, "suf": " par jambe", "diff": 3}, {"muscle": "calves", "name": "Mollets debout", "en": "calf raise", "eq": "B", "base": 20, "sec": false, "suf": "", "diff": 1}, {"muscle": "calves", "name": "Mollets sur une jambe", "en": "single leg calf raise", "eq": "B", "base": 12, "sec": false, "suf": " par jambe", "diff": 2}, {"muscle": "calves", "name": "Mollets haltères", "en": "dumbbell calf raise", "eq": "D", "base": 15, "sec": false, "suf": "", "diff": 2}, {"muscle": "traps", "name": "Y au sol (allongé ventre)", "en": "prone y raise", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "traps", "name": "Shrugs haltères", "en": "dumbbell shrug", "eq": "D", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "traps", "name": "Tirage menton haltères", "en": "dumbbell upright row", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "lats", "name": "Superman tirage", "en": "superman pull", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "lats", "name": "Rowing inversé sous une table", "en": "inverted row", "eq": "B", "base": 8, "sec": false, "suf": "", "diff": 3}, {"muscle": "lats", "name": "Rowing haltère un bras", "en": "dumbbell row", "eq": "D", "base": 10, "sec": false, "suf": " par bras", "diff": 1}, {"muscle": "lats", "name": "Rowing penché haltères", "en": "dumbbell bent over row", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "lats", "name": "Pull-over haltère", "en": "dumbbell pullover", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "lowerback", "name": "Superman", "en": "superman", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "lowerback", "name": "Bird dog", "en": "bird dog", "eq": "B", "base": 10, "sec": false, "suf": " par côté", "diff": 1}, {"muscle": "lowerback", "name": "Good morning", "en": "bodyweight good morning", "eq": "B", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "lowerback", "name": "Soulevé de terre haltères", "en": "dumbbell deadlift", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "triceps", "name": "Pompes mains serrées contre un mur", "en": "close grip wall push up", "eq": "B", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "triceps", "name": "Dips sur une chaise", "en": "bench dips", "eq": "B", "base": 10, "sec": false, "suf": "", "diff": 2}, {"muscle": "triceps", "name": "Pompes diamant", "en": "diamond push up", "eq": "B", "base": 8, "sec": false, "suf": "", "diff": 3}, {"muscle": "triceps", "name": "Extension triceps au-dessus de la tête", "en": "dumbbell overhead tricep extension", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "triceps", "name": "Kickback haltère", "en": "dumbbell tricep kickback", "eq": "D", "base": 12, "sec": false, "suf": " par bras", "diff": 1}, {"muscle": "glutes", "name": "Pont fessier", "en": "glute bridge", "eq": "B", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "glutes", "name": "Donkey kicks", "en": "donkey kick", "eq": "B", "base": 15, "sec": false, "suf": " par jambe", "diff": 1}, {"muscle": "glutes", "name": "Pont fessier une jambe", "en": "single leg glute bridge", "eq": "B", "base": 10, "sec": false, "suf": " par jambe", "diff": 2}, {"muscle": "glutes", "name": "Squat sumo haltère", "en": "dumbbell sumo squat", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 1}, {"muscle": "glutes", "name": "Hip thrust haltère", "en": "dumbbell hip thrust", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}, {"muscle": "hamstrings", "name": "Good morning", "en": "bodyweight good morning", "eq": "B", "base": 15, "sec": false, "suf": "", "diff": 1}, {"muscle": "hamstrings", "name": "Soulevé de terre une jambe", "en": "single leg romanian deadlift", "eq": "B", "base": 10, "sec": false, "suf": " par jambe", "diff": 2}, {"muscle": "hamstrings", "name": "Leg curl glissé (serviette)", "en": "sliding leg curl", "eq": "B", "base": 10, "sec": false, "suf": "", "diff": 3}, {"muscle": "hamstrings", "name": "Soulevé de terre jambes tendues", "en": "dumbbell romanian deadlift", "eq": "D", "base": 12, "sec": false, "suf": "", "diff": 2}];
+const BODIES = {"m_front": [{"id": "base", "d": "M115,30C115,32.7 114.5,35.8 113.5,38.2C112.6,40.7 111,43.1 109.4,44.9C107.7,46.6 105.5,47.9 103.3,48.5C101.2,49.1 98.8,49.1 96.7,48.5C94.5,47.9 92.3,46.6 90.6,44.9C89,43.1 87.4,40.7 86.5,38.2C85.5,35.8 85,32.7 85,30C85,27.3 85.5,24.2 86.5,21.8C87.4,19.3 89,16.9 90.6,15.1C92.3,13.4 94.5,12.1 96.7,11.5C98.8,10.9 101.2,10.9 103.3,11.5C105.5,12.1 107.7,13.4 109.4,15.1C111,16.9 112.6,19.3 113.5,21.8C114.5,24.2 115,27.3 115,30Z"}, {"id": "base", "d": "M92,42C95.2,38.3 104.8,38.3 108,42C111.2,45.7 114.2,60.3 111,64C107.8,67.7 92.2,67.7 89,64C85.8,60.3 88.8,45.7 92,42Z"}, {"id": "base", "d": "M90,57C84.3,57.7 80.7,59.3 76,61C71.3,62.7 65.5,64.2 62,67C58.5,69.8 55.7,73.2 55,78C54.3,82.8 56.5,89 58,96C59.5,103 62.2,111.7 64,120C65.8,128.3 68.5,138 69,146C69.5,154 66.8,160.7 67,168C67.2,175.3 66.5,184.7 70,190C73.5,195.3 81,198.3 88,200C95,201.7 105,201.7 112,200C119,198.3 126.5,195.3 130,190C133.5,184.7 132.8,175.3 133,168C133.2,160.7 130.5,154 131,146C131.5,138 134.2,128.3 136,120C137.8,111.7 140.5,103 142,96C143.5,89 145.7,82.8 145,78C144.3,73.2 141.5,69.8 138,67C134.5,64.2 128.7,62.7 124,61C119.3,59.3 115.7,57.7 110,57C104.3,56.3 95.7,56.3 90,57Z"}, {"id": "base", "d": "M53,70C56.2,68.3 62,69.3 64,74C66,78.7 65.5,87.3 65,98C64.5,108.7 62.7,130.7 61,138C59.3,145.3 57.3,142 55,142C52.7,142 49,143.3 47,138C45,132.7 43.3,119 43,110C42.7,101 43.3,90.7 45,84C46.7,77.3 49.8,71.7 53,70Z"}, {"id": "base", "d": "M155,84C156.7,90.7 157.3,101 157,110C156.7,119 155,132.7 153,138C151,143.3 147.3,142 145,142C142.7,142 140.7,145.3 139,138C137.3,130.7 135.5,108.7 135,98C134.5,87.3 134,78.7 136,74C138,69.3 143.8,68.3 147,70C150.2,71.7 153.3,77.3 155,84Z"}, {"id": "base", "d": "M47,136C50.5,131 59,133.3 61,138C63,142.7 60.3,154.3 59,164C57.7,173.7 55.3,190.7 53,196C50.7,201.3 47.2,200.7 45,196C42.8,191.3 39.7,178 40,168C40.3,158 43.5,141 47,136Z"}, {"id": "base", "d": "M160,168C160.3,178 157.2,191.3 155,196C152.8,200.7 149.3,201.3 147,196C144.7,190.7 142.3,173.7 141,164C139.7,154.3 137,142.7 139,138C141,133.3 149.5,131 153,136C156.5,141 159.7,158 160,168Z"}, {"id": "base", "d": "M55,206C55,207.4 54.8,209 54.4,210.3C53.9,211.6 53.3,212.9 52.6,213.8C51.8,214.7 50.9,215.4 49.9,215.7C49,216.1 48,216.1 47.1,215.7C46.1,215.4 45.2,214.7 44.4,213.8C43.7,212.9 43.1,211.6 42.6,210.3C42.2,209 42,207.4 42,206C42,204.6 42.2,203 42.6,201.7C43.1,200.4 43.7,199.1 44.4,198.2C45.2,197.3 46.1,196.6 47.1,196.3C48,195.9 49,195.9 49.9,196.3C50.9,196.6 51.8,197.3 52.6,198.2C53.3,199.1 53.9,200.4 54.4,201.7C54.8,203 55,204.6 55,206Z"}, {"id": "base", "d": "M145.6,201.7C146.1,200.4 146.7,199.1 147.4,198.2C148.2,197.3 149.1,196.6 150.1,196.3C151,195.9 152,195.9 152.9,196.3C153.9,196.6 154.8,197.3 155.6,198.2C156.3,199.1 156.9,200.4 157.4,201.7C157.8,203 158,204.6 158,206C158,207.4 157.8,209 157.4,210.3C156.9,211.6 156.3,212.9 155.6,213.8C154.8,214.7 153.9,215.4 152.9,215.7C152,216.1 151,216.1 150.1,215.7C149.1,215.4 148.2,214.7 147.4,213.8C146.7,212.9 146.1,211.6 145.6,210.3C145.2,209 145,207.4 145,206C145,204.6 145.2,203 145.6,201.7Z"}, {"id": "base", "d": "M68,178C73.7,173.7 94,180 99,186C104,192 98.7,203 98,214C97.3,225 96.2,240 95,252C93.8,264 94.2,280.3 91,286C87.8,291.7 79.7,291.7 76,286C72.3,280.3 70.8,264.3 69,252C67.2,239.7 65.2,224.3 65,212C64.8,199.7 62.3,182.3 68,178Z"}, {"id": "base", "d": "M135,212C134.8,224.3 132.8,239.7 131,252C129.2,264.3 127.7,280.3 124,286C120.3,291.7 112.2,291.7 109,286C105.8,280.3 106.2,264 105,252C103.8,240 102.7,225 102,214C101.3,203 96,192 101,186C106,180 126.3,173.7 132,178C137.7,182.3 135.2,199.7 135,212Z"}, {"id": "base", "d": "M75,280C78.3,275 90,276 93,280C96,284 93.7,292.3 93,304C92.3,315.7 91.3,342.3 89,350C86.7,357.7 81.7,356.7 79,350C76.3,343.3 73.7,321.7 73,310C72.3,298.3 71.7,285 75,280Z"}, {"id": "base", "d": "M127,310C126.3,321.7 123.7,343.3 121,350C118.3,356.7 113.3,357.7 111,350C108.7,342.3 107.7,315.7 107,304C106.3,292.3 104,284 107,280C110,276 121.7,275 125,280C128.3,285 127.7,298.3 127,310Z"}, {"id": "base", "d": "M77,346C80.7,344.5 88.3,344.3 91,346C93.7,347.7 93.5,353.3 93,356C92.5,358.7 92.2,361 88,362C83.8,363 71.2,363.2 68,362C64.8,360.8 67.5,357.7 69,355C70.5,352.3 73.3,347.5 77,346Z"}, {"id": "base", "d": "M131,355C132.5,357.7 135.2,360.8 132,362C128.8,363.2 116.2,363 112,362C107.8,361 107.5,358.7 107,356C106.5,353.3 106.3,347.7 109,346C111.7,344.3 119.3,344.5 123,346C126.7,347.5 129.5,352.3 131,355Z"}, {"id": "hair", "d": "M85,24C84.7,23.2 85.5,16.3 88,14C90.5,11.7 96,10 100,10C104,10 109.5,11.7 112,14C114.5,16.3 115.3,23.2 115,24C114.7,24.8 112.5,20.2 110,19C107.5,17.8 103.3,17 100,17C96.7,17 92.5,17.8 90,19C87.5,20.2 85.3,24.8 85,24Z"}, {"id": "traps", "d": "M90,56C94.2,55 96.3,60 95,62C93.7,64 86.2,67 82,68C77.8,69 68.7,70 70,68C71.3,66 85.8,57 90,56Z"}, {"id": "traps", "d": "M130,68C131.3,70 122.2,69 118,68C113.8,67 106.3,64 105,62C103.7,60 105.8,55 110,56C114.2,57 128.7,66 130,68Z"}, {"id": "shoulders", "d": "M60,69C63.2,66.7 71.2,64.2 73,66C74.8,67.8 72.3,75.2 71,80C69.7,84.8 67.3,93 65,95C62.7,97 58.8,94.5 57,92C55.2,89.5 53.5,83.8 54,80C54.5,76.2 56.8,71.3 60,69Z"}, {"id": "shoulders", "d": "M146,80C146.5,83.8 144.8,89.5 143,92C141.2,94.5 137.3,97 135,95C132.7,93 130.3,84.8 129,80C127.7,75.2 125.2,67.8 127,66C128.8,64.2 136.8,66.7 140,69C143.2,71.3 145.5,76.2 146,80Z"}, {"id": "chest", "d": "M98,74C101.5,78 99.3,92 98,97C96.7,102 93.7,103 90,104C86.3,105 80,104.5 76,103C72,101.5 67.7,98.5 66,95C64.3,91.5 64.2,85.7 66,82C67.8,78.3 71.7,74.3 77,73C82.3,71.7 94.5,70 98,74Z"}, {"id": "chest", "d": "M123,73C128.3,74.3 132.2,78.3 134,82C135.8,85.7 135.7,91.5 134,95C132.3,98.5 128,101.5 124,103C120,104.5 113.7,105 110,104C106.3,103 103.3,102 102,97C100.7,92 98.5,78 102,74C105.5,70 117.7,71.7 123,73Z"}, {"id": "biceps", "d": "M56,95C58.3,92.5 61.8,94.2 63,98C64.2,101.8 63.8,112 63,118C62.2,124 60,131.7 58,134C56,136.3 52.5,135.5 51,132C49.5,128.5 48.2,119.2 49,113C49.8,106.8 53.7,97.5 56,95Z"}, {"id": "biceps", "d": "M151,113C151.8,119.2 150.5,128.5 149,132C147.5,135.5 144,136.3 142,134C140,131.7 137.8,124 137,118C136.2,112 135.8,101.8 137,98C138.2,94.2 141.7,92.5 144,95C146.3,97.5 150.2,106.8 151,113Z"}, {"id": "forearms", "d": "M46,141C48.5,136.8 55.2,137.8 57,141C58.8,144.2 57.8,152 57,160C56.2,168 53.8,184.2 52,189C50.2,193.8 47.7,192.8 46,189C44.3,185.2 42,174 42,166C42,158 43.5,145.2 46,141Z"}, {"id": "forearms", "d": "M158,166C158,174 155.7,185.2 154,189C152.3,192.8 149.8,193.8 148,189C146.2,184.2 143.8,168 143,160C142.2,152 141.2,144.2 143,141C144.8,137.8 151.5,136.8 154,141C156.5,145.2 158,158 158,166Z"}, {"id": "abs", "d": "M92.5,108C93.5,107.4 94,107.4 95,108C96,108.6 97.9,109.8 98.5,111.5C99.1,113.2 99.1,116.8 98.5,118.5C97.9,120.2 96,121.4 95,122C94,122.6 93.5,122.6 92.5,122C91.5,121.4 89.6,120.2 89,118.5C88.4,116.8 88.4,113.2 89,111.5C89.6,109.8 91.5,108.6 92.5,108Z"}, {"id": "abs", "d": "M111,111.5C111.6,113.2 111.6,116.8 111,118.5C110.4,120.2 108.5,121.4 107.5,122C106.5,122.6 106,122.6 105,122C104,121.4 102.1,120.2 101.5,118.5C100.9,116.8 100.9,113.2 101.5,111.5C102.1,109.8 104,108.6 105,108C106,107.4 106.5,107.4 107.5,108C108.5,108.6 110.4,109.8 111,111.5Z"}, {"id": "abs", "d": "M92.5,125C93.5,124.4 94,124.4 95,125C96,125.6 97.9,126.8 98.5,128.5C99.1,130.2 99.1,133.8 98.5,135.5C97.9,137.2 96,138.4 95,139C94,139.6 93.5,139.6 92.5,139C91.5,138.4 89.6,137.2 89,135.5C88.4,133.8 88.4,130.2 89,128.5C89.6,126.8 91.5,125.6 92.5,125Z"}, {"id": "abs", "d": "M111,128.5C111.6,130.2 111.6,133.8 111,135.5C110.4,137.2 108.5,138.4 107.5,139C106.5,139.6 106,139.6 105,139C104,138.4 102.1,137.2 101.5,135.5C100.9,133.8 100.9,130.2 101.5,128.5C102.1,126.8 104,125.6 105,125C106,124.4 106.5,124.4 107.5,125C108.5,125.6 110.4,126.8 111,128.5Z"}, {"id": "abs", "d": "M92.5,142C93.5,141.4 94,141.4 95,142C96,142.6 97.9,143.4 98.5,145.5C99.1,147.6 99.1,152.4 98.5,154.5C97.9,156.6 96,157.4 95,158C94,158.6 93.5,158.6 92.5,158C91.5,157.4 89.6,156.6 89,154.5C88.4,152.4 88.4,147.6 89,145.5C89.6,143.4 91.5,142.6 92.5,142Z"}, {"id": "abs", "d": "M111,145.5C111.6,147.6 111.6,152.4 111,154.5C110.4,156.6 108.5,157.4 107.5,158C106.5,158.6 106,158.6 105,158C104,157.4 102.1,156.6 101.5,154.5C100.9,152.4 100.9,147.6 101.5,145.5C102.1,143.4 104,142.6 105,142C106,141.4 106.5,141.4 107.5,142C108.5,142.6 110.4,143.4 111,145.5Z"}, {"id": "obliques", "d": "M73,108C75.8,105.7 83.7,105.3 86,112C88.3,118.7 87.8,139 87,148C86.2,157 83.3,165.3 81,166C78.7,166.7 75,158.7 73,152C71,145.3 69,133.3 69,126C69,118.7 70.2,110.3 73,108Z"}, {"id": "obliques", "d": "M131,126C131,133.3 129,145.3 127,152C125,158.7 121.3,166.7 119,166C116.7,165.3 113.8,157 113,148C112.2,139 111.7,118.7 114,112C116.3,105.3 124.2,105.7 127,108C129.8,110.3 131,118.7 131,126Z"}, {"id": "quads", "d": "M70,194C72.2,188.8 79,191.7 81,199C83,206.3 82.2,225.7 82,238C81.8,250.3 81.3,268 80,273C78.7,278 76,275.2 74,268C72,260.8 68.7,242.3 68,230C67.3,217.7 67.8,199.2 70,194Z"}, {"id": "quads", "d": "M132,230C131.3,242.3 128,260.8 126,268C124,275.2 121.3,278 120,273C118.7,268 118.2,250.3 118,238C117.8,225.7 117,206.3 119,199C121,191.7 127.8,188.8 130,194C132.2,199.2 132.7,217.7 132,230Z"}, {"id": "quads", "d": "M84,199C86.2,193.5 94.2,195.5 96,202C97.8,208.5 96,226.2 95,238C94,249.8 92,267.5 90,273C88,278.5 84.2,277.3 83,271C81.8,264.7 82.8,247 83,235C83.2,223 81.8,204.5 84,199Z"}, {"id": "quads", "d": "M117,235C117.2,247 118.2,264.7 117,271C115.8,277.3 112,278.5 110,273C108,267.5 106,249.8 105,238C104,226.2 102.2,208.5 104,202C105.8,195.5 113.8,193.5 116,199C118.2,204.5 116.8,223 117,235Z"}, {"id": "calves", "d": "M76,290C77.7,286.7 82.5,285.3 84,289C85.5,292.7 85.5,303.8 85,312C84.5,320.2 82.5,334.7 81,338C79.5,341.3 77.2,336.8 76,332C74.8,327.2 74,316 74,309C74,302 74.3,293.3 76,290Z"}, {"id": "calves", "d": "M126,309C126,316 125.2,327.2 124,332C122.8,336.8 120.5,341.3 119,338C117.5,334.7 115.5,320.2 115,312C114.5,303.8 114.5,292.7 116,289C117.5,285.3 122.3,286.7 124,290C125.7,293.3 126,302 126,309Z"}], "m_back": [{"id": "base", "d": "M115,30C115,32.7 114.5,35.8 113.5,38.2C112.6,40.7 111,43.1 109.4,44.9C107.7,46.6 105.5,47.9 103.3,48.5C101.2,49.1 98.8,49.1 96.7,48.5C94.5,47.9 92.3,46.6 90.6,44.9C89,43.1 87.4,40.7 86.5,38.2C85.5,35.8 85,32.7 85,30C85,27.3 85.5,24.2 86.5,21.8C87.4,19.3 89,16.9 90.6,15.1C92.3,13.4 94.5,12.1 96.7,11.5C98.8,10.9 101.2,10.9 103.3,11.5C105.5,12.1 107.7,13.4 109.4,15.1C111,16.9 112.6,19.3 113.5,21.8C114.5,24.2 115,27.3 115,30Z"}, {"id": "base", "d": "M92,42C95.2,38.3 104.8,38.3 108,42C111.2,45.7 114.2,60.3 111,64C107.8,67.7 92.2,67.7 89,64C85.8,60.3 88.8,45.7 92,42Z"}, {"id": "base", "d": "M90,57C84.3,57.7 80.7,59.3 76,61C71.3,62.7 65.5,64.2 62,67C58.5,69.8 55.7,73.2 55,78C54.3,82.8 56.5,89 58,96C59.5,103 62.2,111.7 64,120C65.8,128.3 68.5,138 69,146C69.5,154 66.8,160.7 67,168C67.2,175.3 66.5,184.7 70,190C73.5,195.3 81,198.3 88,200C95,201.7 105,201.7 112,200C119,198.3 126.5,195.3 130,190C133.5,184.7 132.8,175.3 133,168C133.2,160.7 130.5,154 131,146C131.5,138 134.2,128.3 136,120C137.8,111.7 140.5,103 142,96C143.5,89 145.7,82.8 145,78C144.3,73.2 141.5,69.8 138,67C134.5,64.2 128.7,62.7 124,61C119.3,59.3 115.7,57.7 110,57C104.3,56.3 95.7,56.3 90,57Z"}, {"id": "base", "d": "M53,70C56.2,68.3 62,69.3 64,74C66,78.7 65.5,87.3 65,98C64.5,108.7 62.7,130.7 61,138C59.3,145.3 57.3,142 55,142C52.7,142 49,143.3 47,138C45,132.7 43.3,119 43,110C42.7,101 43.3,90.7 45,84C46.7,77.3 49.8,71.7 53,70Z"}, {"id": "base", "d": "M155,84C156.7,90.7 157.3,101 157,110C156.7,119 155,132.7 153,138C151,143.3 147.3,142 145,142C142.7,142 140.7,145.3 139,138C137.3,130.7 135.5,108.7 135,98C134.5,87.3 134,78.7 136,74C138,69.3 143.8,68.3 147,70C150.2,71.7 153.3,77.3 155,84Z"}, {"id": "base", "d": "M47,136C50.5,131 59,133.3 61,138C63,142.7 60.3,154.3 59,164C57.7,173.7 55.3,190.7 53,196C50.7,201.3 47.2,200.7 45,196C42.8,191.3 39.7,178 40,168C40.3,158 43.5,141 47,136Z"}, {"id": "base", "d": "M160,168C160.3,178 157.2,191.3 155,196C152.8,200.7 149.3,201.3 147,196C144.7,190.7 142.3,173.7 141,164C139.7,154.3 137,142.7 139,138C141,133.3 149.5,131 153,136C156.5,141 159.7,158 160,168Z"}, {"id": "base", "d": "M55,206C55,207.4 54.8,209 54.4,210.3C53.9,211.6 53.3,212.9 52.6,213.8C51.8,214.7 50.9,215.4 49.9,215.7C49,216.1 48,216.1 47.1,215.7C46.1,215.4 45.2,214.7 44.4,213.8C43.7,212.9 43.1,211.6 42.6,210.3C42.2,209 42,207.4 42,206C42,204.6 42.2,203 42.6,201.7C43.1,200.4 43.7,199.1 44.4,198.2C45.2,197.3 46.1,196.6 47.1,196.3C48,195.9 49,195.9 49.9,196.3C50.9,196.6 51.8,197.3 52.6,198.2C53.3,199.1 53.9,200.4 54.4,201.7C54.8,203 55,204.6 55,206Z"}, {"id": "base", "d": "M145.6,201.7C146.1,200.4 146.7,199.1 147.4,198.2C148.2,197.3 149.1,196.6 150.1,196.3C151,195.9 152,195.9 152.9,196.3C153.9,196.6 154.8,197.3 155.6,198.2C156.3,199.1 156.9,200.4 157.4,201.7C157.8,203 158,204.6 158,206C158,207.4 157.8,209 157.4,210.3C156.9,211.6 156.3,212.9 155.6,213.8C154.8,214.7 153.9,215.4 152.9,215.7C152,216.1 151,216.1 150.1,215.7C149.1,215.4 148.2,214.7 147.4,213.8C146.7,212.9 146.1,211.6 145.6,210.3C145.2,209 145,207.4 145,206C145,204.6 145.2,203 145.6,201.7Z"}, {"id": "base", "d": "M68,178C73.7,173.7 94,180 99,186C104,192 98.7,203 98,214C97.3,225 96.2,240 95,252C93.8,264 94.2,280.3 91,286C87.8,291.7 79.7,291.7 76,286C72.3,280.3 70.8,264.3 69,252C67.2,239.7 65.2,224.3 65,212C64.8,199.7 62.3,182.3 68,178Z"}, {"id": "base", "d": "M135,212C134.8,224.3 132.8,239.7 131,252C129.2,264.3 127.7,280.3 124,286C120.3,291.7 112.2,291.7 109,286C105.8,280.3 106.2,264 105,252C103.8,240 102.7,225 102,214C101.3,203 96,192 101,186C106,180 126.3,173.7 132,178C137.7,182.3 135.2,199.7 135,212Z"}, {"id": "base", "d": "M75,280C78.3,275 90,276 93,280C96,284 93.7,292.3 93,304C92.3,315.7 91.3,342.3 89,350C86.7,357.7 81.7,356.7 79,350C76.3,343.3 73.7,321.7 73,310C72.3,298.3 71.7,285 75,280Z"}, {"id": "base", "d": "M127,310C126.3,321.7 123.7,343.3 121,350C118.3,356.7 113.3,357.7 111,350C108.7,342.3 107.7,315.7 107,304C106.3,292.3 104,284 107,280C110,276 121.7,275 125,280C128.3,285 127.7,298.3 127,310Z"}, {"id": "base", "d": "M77,346C80.7,344.5 88.3,344.3 91,346C93.7,347.7 93.5,353.3 93,356C92.5,358.7 92.2,361 88,362C83.8,363 71.2,363.2 68,362C64.8,360.8 67.5,357.7 69,355C70.5,352.3 73.3,347.5 77,346Z"}, {"id": "base", "d": "M131,355C132.5,357.7 135.2,360.8 132,362C128.8,363.2 116.2,363 112,362C107.8,361 107.5,358.7 107,356C106.5,353.3 106.3,347.7 109,346C111.7,344.3 119.3,344.5 123,346C126.7,347.5 129.5,352.3 131,355Z"}, {"id": "hair", "d": "M115.5,26C115.5,28.5 114.9,31.2 114,33.4C113,35.6 111.4,37.8 109.7,39.3C107.9,40.8 105.6,42 103.4,42.6C101.3,43.1 98.7,43.1 96.6,42.6C94.4,42 92.1,40.8 90.3,39.3C88.6,37.8 87,35.6 86,33.4C85.1,31.2 84.5,28.5 84.5,26C84.5,23.5 85.1,20.8 86,18.6C87,16.4 88.6,14.2 90.3,12.7C92.1,11.2 94.4,10 96.6,9.4C98.7,8.9 101.3,8.9 103.4,9.4C105.6,10 107.9,11.2 109.7,12.7C111.4,14.2 113,16.4 114,18.6C114.9,20.8 115.5,23.5 115.5,26Z"}, {"id": "traps", "d": "M100,52C102.7,52 103,56.2 108,59C113,61.8 128.7,64.5 130,69C131.3,73.5 120,77.8 116,86C112,94.2 108.7,111.3 106,118C103.3,124.7 102,126 100,126C98,126 96.7,124.7 94,118C91.3,111.3 88,94.2 84,86C80,77.8 68.7,73.5 70,69C71.3,64.5 87,61.8 92,59C97,56.2 97.3,52 100,52Z"}, {"id": "shoulders", "d": "M60,69C63,66.8 70,65.2 72,67C74,68.8 73.2,75.3 72,80C70.8,84.7 67.5,93 65,95C62.5,97 58.8,94.5 57,92C55.2,89.5 53.5,83.8 54,80C54.5,76.2 57,71.2 60,69Z"}, {"id": "shoulders", "d": "M146,80C146.5,83.8 144.8,89.5 143,92C141.2,94.5 137.5,97 135,95C132.5,93 129.2,84.7 128,80C126.8,75.3 126,68.8 128,67C130,65.2 137,66.8 140,69C143,71.2 145.5,76.2 146,80Z"}, {"id": "lats", "d": "M68,96C70.2,90.3 77.5,88.3 82,92C86.5,95.7 92.7,110.7 95,118C97.3,125.3 97.5,129.5 96,136C94.5,142.5 89.7,154.7 86,157C82.3,159.3 76.8,155.2 74,150C71.2,144.8 70,135 69,126C68,117 65.8,101.7 68,96Z"}, {"id": "lats", "d": "M131,126C130,135 128.8,144.8 126,150C123.2,155.2 117.7,159.3 114,157C110.3,154.7 105.5,142.5 104,136C102.5,129.5 102.7,125.3 105,118C107.3,110.7 113.5,95.7 118,92C122.5,88.3 129.8,90.3 132,96C134.2,101.7 132,117 131,126Z"}, {"id": "triceps", "d": "M53,92C55.5,89 61.3,90.7 63,95C64.7,99.3 63.8,111.3 63,118C62.2,124.7 60,132.3 58,135C56,137.7 52.7,137.7 51,134C49.3,130.3 47.7,120 48,113C48.3,106 50.5,95 53,92Z"}, {"id": "triceps", "d": "M152,113C152.3,120 150.7,130.3 149,134C147.3,137.7 144,137.7 142,135C140,132.3 137.8,124.7 137,118C136.2,111.3 135.3,99.3 137,95C138.7,90.7 144.5,89 147,92C149.5,95 151.7,106 152,113Z"}, {"id": "forearms", "d": "M46,141C48.5,136.8 55.2,137.8 57,141C58.8,144.2 57.8,152 57,160C56.2,168 53.8,184.2 52,189C50.2,193.8 47.7,192.8 46,189C44.3,185.2 42,174 42,166C42,158 43.5,145.2 46,141Z"}, {"id": "forearms", "d": "M158,166C158,174 155.7,185.2 154,189C152.3,192.8 149.8,193.8 148,189C146.2,184.2 143.8,168 143,160C142.2,152 141.2,144.2 143,141C144.8,137.8 151.5,136.8 154,141C156.5,145.2 158,158 158,166Z"}, {"id": "lowerback", "d": "M90,140C92.2,136 97.1,130 98.5,136C99.9,142 100.1,169 98.5,176C96.9,183 91.2,180.7 89,178C86.8,175.3 84.8,166.3 85,160C85.2,153.7 87.8,144 90,140Z"}, {"id": "lowerback", "d": "M115,160C115.2,166.3 113.2,175.3 111,178C108.8,180.7 103.1,183 101.5,176C99.9,169 100.1,142 101.5,136C102.9,130 107.8,136 110,140C112.2,144 114.8,153.7 115,160Z"}, {"id": "glutes", "d": "M74,176C78.8,174.3 94.4,177.2 98.5,182C102.6,186.8 99.9,199.7 98.5,205C97.1,210.3 93.9,213.3 90,214C86.1,214.7 78.3,212.7 75,209C71.7,205.3 70.2,197.5 70,192C69.8,186.5 69.2,177.7 74,176Z"}, {"id": "glutes", "d": "M130,192C129.8,197.5 128.3,205.3 125,209C121.7,212.7 113.9,214.7 110,214C106.1,213.3 102.9,210.3 101.5,205C100.1,199.7 97.4,186.8 101.5,182C105.6,177.2 121.2,174.3 126,176C130.8,177.7 130.2,186.5 130,192Z"}, {"id": "hamstrings", "d": "M70,214C72.3,210 80.8,212 83,218C85.2,224 83.5,240 83,250C82.5,260 81.7,274.3 80,278C78.3,281.7 74.8,278 73,272C71.2,266 69.5,251.7 69,242C68.5,232.3 67.7,218 70,214Z"}, {"id": "hamstrings", "d": "M131,242C130.5,251.7 128.8,266 127,272C125.2,278 121.7,281.7 120,278C118.3,274.3 117.5,260 117,250C116.5,240 114.8,224 117,218C119.2,212 127.7,210 130,214C132.3,218 131.5,232.3 131,242Z"}, {"id": "hamstrings", "d": "M86,218C87.8,212.5 94.5,209.3 96,214C97.5,218.7 96,235.3 95,246C94,256.7 91.8,273 90,278C88.2,283 84.8,281.2 84,276C83.2,270.8 84.7,256.7 85,247C85.3,237.3 84.2,223.5 86,218Z"}, {"id": "hamstrings", "d": "M115,247C115.3,256.7 116.8,270.8 116,276C115.2,281.2 111.8,283 110,278C108.2,273 106,256.7 105,246C104,235.3 102.5,218.7 104,214C105.5,209.3 112.2,212.5 114,218C115.8,223.5 114.7,237.3 115,247Z"}, {"id": "calves", "d": "M75,286C77,283.5 82.5,282.7 84,287C85.5,291.3 84.7,304.5 84,312C83.3,319.5 81.7,330 80,332C78.3,334 75.3,329 74,324C72.7,319 71.8,308.3 72,302C72.2,295.7 73,288.5 75,286Z"}, {"id": "calves", "d": "M128,302C128.2,308.3 127.3,319 126,324C124.7,329 121.7,334 120,332C118.3,330 116.7,319.5 116,312C115.3,304.5 114.5,291.3 116,287C117.5,282.7 123,283.5 125,286C127,288.5 127.8,295.7 128,302Z"}, {"id": "calves", "d": "M85,287C86.2,284.3 90.7,283.5 92,286C93.3,288.5 93.5,295.7 93,302C92.5,308.3 90.5,321 89,324C87.5,327 84.7,323.7 84,320C83.3,316.3 84.8,307.5 85,302C85.2,296.5 83.8,289.7 85,287Z"}, {"id": "calves", "d": "M115,302C115.2,307.5 116.7,316.3 116,320C115.3,323.7 112.5,327 111,324C109.5,321 107.5,308.3 107,302C106.5,295.7 106.7,288.5 108,286C109.3,283.5 113.8,284.3 115,287C116.2,289.7 114.8,296.5 115,302Z"}], "f_front": [{"id": "hair", "d": "M84.7,28C85.4,21.2 84.7,16.3 87.2,13C89.8,9.7 95.7,8 100,8C104.3,8 110.2,9.7 112.8,13C115.3,16.3 114.6,21.2 115.3,28C116,34.8 118.2,49 116.8,54C115.4,59 109.9,58.7 107.1,58C104.3,57.3 102.4,50 100,50C97.6,50 95.7,57.3 92.9,58C90.1,58.7 84.6,59 83.2,54C81.8,49 84,34.8 84.7,28Z"}, {"id": "base", "d": "M113.5,30C113.5,32.7 113,35.8 112.1,38.2C111.2,40.7 109.8,43.1 108.3,44.9C106.8,46.6 104.8,47.9 103,48.5C101.1,49.1 98.9,49.1 97,48.5C95.2,47.9 93.2,46.6 91.7,44.9C90.2,43.1 88.8,40.7 87.9,38.2C87,35.8 86.5,32.7 86.5,30C86.5,27.3 86.9,24.2 87.8,21.8C88.6,19.3 90,16.9 91.5,15.1C93,13.4 95,12.1 97,11.5C98.9,10.9 101.1,10.9 103,11.5C105,12.1 107,13.4 108.5,15.1C110,16.9 111.4,19.3 112.2,21.8C113.1,24.2 113.5,27.3 113.5,30Z"}, {"id": "base", "d": "M92.9,42C95.7,38.3 104.3,38.3 107.1,42C109.9,45.7 112.5,60.3 109.7,64C106.9,67.7 93.1,67.7 90.3,64C87.5,60.3 90.1,45.7 92.9,42Z"}, {"id": "base", "d": "M91.2,57C86.2,57.7 83,59.3 78.9,61C74.8,62.7 69.6,64.2 66.6,67C63.5,69.8 61,73.2 60.4,78C59.8,82.8 61.7,89 63.1,96C64.5,103 67,111.7 68.8,120C70.7,128.3 74.4,138 74.1,146C73.8,154 68.2,160.7 67.2,168C66.3,175.3 65,184.7 68.4,190C71.7,195.3 80,198.3 87.3,200C94.7,201.7 105.3,201.7 112.7,200C120,198.3 128.3,195.3 131.6,190C135,184.7 133.7,175.3 132.8,168C131.8,160.7 126.2,154 125.9,146C125.6,138 129.3,128.3 131.2,120C133,111.7 135.5,103 136.9,96C138.3,89 140.2,82.8 139.6,78C139,73.2 136.5,69.8 133.4,67C130.4,64.2 125.2,62.7 121.1,61C117,59.3 113.8,57.7 108.8,57C103.8,56.3 96.2,56.3 91.2,57Z"}, {"id": "base", "d": "M58.6,70C61.4,68.3 66.5,69.3 68.3,74C70.1,78.7 69.5,87.3 69.3,98C69,108.7 68.1,130.7 66.9,138C65.7,145.3 64.1,142 62.1,142C60.1,142 57,143.3 55.1,138C53.1,132.7 50.9,119 50.3,110C49.8,101 50.2,90.7 51.6,84C53,77.3 55.9,71.7 58.6,70Z"}, {"id": "base", "d": "M148.4,84C149.8,90.7 150.2,101 149.7,110C149.1,119 146.9,132.7 144.9,138C143,143.3 139.9,142 137.9,142C135.9,142 134.3,145.3 133.1,138C131.9,130.7 131,108.7 130.7,98C130.5,87.3 129.9,78.7 131.7,74C133.5,69.3 138.6,68.3 141.4,70C144.1,71.7 147,77.3 148.4,84Z"}, {"id": "base", "d": "M54.9,136C59.3,131 66,133.3 66.9,138C67.9,142.7 63.5,154.3 60.8,164C58,173.7 53.4,190.7 50.2,196C47.1,201.3 43.4,200.7 41.7,196C40.1,191.3 38.2,178 40.4,168C42.6,158 50.5,141 54.9,136Z"}, {"id": "base", "d": "M159.6,168C161.8,178 159.9,191.3 158.3,196C156.6,200.7 152.9,201.3 149.8,196C146.6,190.7 142,173.7 139.2,164C136.5,154.3 132.1,142.7 133.1,138C134,133.3 140.7,131 145.1,136C149.5,141 157.4,158 159.6,168Z"}, {"id": "base", "d": "M52.7,206C52.8,207.4 52.6,209 52.2,210.3C51.9,211.6 51.2,212.9 50.5,213.8C49.8,214.7 48.8,215.4 47.9,215.7C46.9,216.1 45.8,216.1 44.9,215.7C43.9,215.4 42.9,214.7 42,213.8C41.2,212.9 40.5,211.6 40,210.3C39.5,209 39.2,207.4 39.1,206C39,204.6 39.2,203 39.5,201.7C39.9,200.4 40.5,199.1 41.3,198.2C42,197.3 43,196.6 43.9,196.3C44.9,195.9 46,195.9 47,196.3C48,196.6 49,197.3 49.8,198.2C50.7,199.1 51.4,200.4 51.9,201.7C52.4,203 52.7,204.6 52.7,206Z"}, {"id": "base", "d": "M148.1,201.7C148.6,200.4 149.3,199.1 150.2,198.2C151,197.3 152,196.6 153,196.3C154,195.9 155.1,195.9 156.1,196.3C157,196.6 158,197.3 158.7,198.2C159.5,199.1 160.1,200.4 160.5,201.7C160.8,203 161,204.6 160.9,206C160.8,207.4 160.5,209 160,210.3C159.5,211.6 158.8,212.9 158,213.8C157.1,214.7 156.1,215.4 155.1,215.7C154.2,216.1 153.1,216.1 152.1,215.7C151.2,215.4 150.2,214.7 149.5,213.8C148.8,212.9 148.1,211.6 147.8,210.3C147.4,209 147.2,207.4 147.3,206C147.3,204.6 147.6,203 148.1,201.7Z"}, {"id": "base", "d": "M66.8,178C72.7,173.7 93.8,180 99,186C104.1,192 98.6,203 97.9,214C97.2,225 96.1,240 94.9,252C93.8,264 94.2,280.3 91.1,286C88,291.7 80,291.7 76.3,286C72.5,280.3 70.8,264.3 68.6,252C66.5,239.7 63.7,224.3 63.4,212C63.1,199.7 60.9,182.3 66.8,178Z"}, {"id": "base", "d": "M136.6,212C136.3,224.3 133.5,239.7 131.4,252C129.2,264.3 127.5,280.3 123.7,286C120,291.7 112,291.7 108.9,286C105.8,280.3 106.2,264 105.1,252C103.9,240 102.8,225 102.1,214C101.4,203 95.9,192 101,186C106.2,180 127.3,173.7 133.2,178C139.1,182.3 136.9,199.7 136.6,212Z"}, {"id": "base", "d": "M75.2,280C78.4,275 90.1,276 93,280C96,284 93.8,292.3 93.1,304C92.5,315.7 91.5,342.3 89.2,350C86.9,357.7 82,356.7 79.4,350C76.8,343.3 74.2,321.7 73.5,310C72.8,298.3 71.9,285 75.2,280Z"}, {"id": "base", "d": "M126.5,310C125.8,321.7 123.2,343.3 120.6,350C118,356.7 113.1,357.7 110.8,350C108.5,342.3 107.5,315.7 106.9,304C106.2,292.3 104,284 107,280C109.9,276 121.6,275 124.8,280C128.1,285 127.2,298.3 126.5,310Z"}, {"id": "base", "d": "M77.5,346C81.1,344.5 88.6,344.3 91.2,346C93.8,347.7 93.6,353.3 93.1,356C92.7,358.7 92.3,361 88.2,362C84.2,363 71.7,363.2 68.6,362C65.5,360.8 68.2,357.7 69.6,355C71.1,352.3 73.9,347.5 77.5,346Z"}, {"id": "base", "d": "M130.4,355C131.8,357.7 134.5,360.8 131.4,362C128.3,363.2 115.8,363 111.8,362C107.7,361 107.3,358.7 106.9,356C106.4,353.3 106.2,347.7 108.8,346C111.4,344.3 118.9,344.5 122.5,346C126.1,347.5 128.9,352.3 130.4,355Z"}, {"id": "hair", "d": "M86.5,26C85.7,24.7 85.9,16.8 88.2,14C90.4,11.2 96.1,9 100,9C103.9,9 109.6,11.2 111.8,14C114.1,16.8 114,25 113.5,26C113.1,27 111.2,21.3 109.1,20C107,18.7 103.6,17.7 100.9,18C98.2,18.3 95.2,20.7 92.8,22C90.3,23.3 87.2,27.3 86.5,26Z"}, {"id": "traps", "d": "M91.2,56C94.8,55 96.8,60 95.6,62C94.4,64 87.8,67 84.2,68C80.5,69 72.4,70 73.6,68C74.8,66 87.5,57 91.2,56Z"}, {"id": "traps", "d": "M126.4,68C127.6,70 119.5,69 115.8,68C112.2,67 105.6,64 104.4,62C103.2,60 105.2,55 108.8,56C112.5,57 125.2,66 126.4,68Z"}, {"id": "shoulders", "d": "M64.8,69C67.6,66.7 74.6,64.2 76.2,66C77.9,67.8 75.7,75.2 74.5,80C73.3,84.8 71.3,93 69.2,95C67.1,97 63.8,94.5 62.2,92C60.5,89.5 59.1,83.8 59.5,80C60,76.2 62,71.3 64.8,69Z"}, {"id": "shoulders", "d": "M140.5,80C140.9,83.8 139.5,89.5 137.8,92C136.2,94.5 132.9,97 130.8,95C128.7,93 126.7,84.8 125.5,80C124.3,75.2 122.1,67.8 123.8,66C125.4,64.2 132.4,66.7 135.2,69C138,71.3 140,76.2 140.5,80Z"}, {"id": "chest", "d": "M98.2,74C101.3,78 99.4,92 98.2,97C97.1,102 94.5,103 91.3,104C88,105 82.5,104.5 79,103C75.5,101.5 71.6,98.5 70.1,95C68.6,91.5 68.5,85.7 70.1,82C71.7,78.3 75.1,74.3 79.8,73C84.5,71.7 95.2,70 98.2,74Z"}, {"id": "chest", "d": "M120.2,73C124.9,74.3 128.3,78.3 129.9,82C131.5,85.7 131.4,91.5 129.9,95C128.4,98.5 124.5,101.5 121,103C117.5,104.5 112,105 108.7,104C105.5,103 102.9,102 101.8,97C100.6,92 98.7,78 101.8,74C104.8,70 115.5,71.7 120.2,73Z"}, {"id": "biceps", "d": "M61.3,95C63.3,92.5 66.4,94.2 67.5,98C68.6,101.8 68.5,112 67.9,118C67.4,124 65.8,131.7 64.1,134C62.5,136.3 59.4,135.5 58,132C56.6,128.5 55.1,119.2 55.6,113C56.2,106.8 59.3,97.5 61.3,95Z"}, {"id": "biceps", "d": "M144.4,113C144.9,119.2 143.4,128.5 142,132C140.6,135.5 137.5,136.3 135.9,134C134.2,131.7 132.6,124 132.1,118C131.5,112 131.4,101.8 132.5,98C133.6,94.2 136.7,92.5 138.7,95C140.7,97.5 143.8,106.8 144.4,113Z"}, {"id": "forearms", "d": "M54.5,141C57.8,136.8 62.7,137.8 63.7,141C64.7,144.2 62.8,152 60.4,160C58,168 52.4,184.2 49.5,189C46.6,193.8 44.2,192.8 43.2,189C42.2,185.2 41.5,174 43.4,166C45.3,158 51.1,145.2 54.5,141Z"}, {"id": "forearms", "d": "M156.6,166C158.5,174 157.8,185.2 156.8,189C155.8,192.8 153.4,193.8 150.5,189C147.6,184.2 142,168 139.6,160C137.2,152 135.3,144.2 136.3,141C137.3,137.8 142.2,136.8 145.5,141C148.9,145.2 154.7,158 156.6,166Z"}, {"id": "abs", "d": "M93.5,108C94.3,107.4 94.8,107.4 95.6,108C96.5,108.6 98.2,109.8 98.7,111.5C99.2,113.2 99.2,116.8 98.7,118.5C98.2,120.2 96.5,121.4 95.7,122C94.8,122.6 94.4,122.6 93.5,122C92.6,121.4 91,120.2 90.5,118.5C90,116.8 89.9,113.2 90.4,111.5C90.9,109.8 92.6,108.6 93.5,108Z"}, {"id": "abs", "d": "M109.6,111.5C110.1,113.2 110,116.8 109.5,118.5C109,120.2 107.4,121.4 106.5,122C105.6,122.6 105.2,122.6 104.3,122C103.5,121.4 101.8,120.2 101.3,118.5C100.8,116.8 100.8,113.2 101.3,111.5C101.8,109.8 103.5,108.6 104.4,108C105.2,107.4 105.7,107.4 106.5,108C107.4,108.6 109.1,109.8 109.6,111.5Z"}, {"id": "abs", "d": "M93.5,125C94.4,124.4 94.8,124.4 95.7,125C96.5,125.6 98.2,126.8 98.7,128.5C99.2,130.2 99.2,133.8 98.7,135.5C98.2,137.2 96.6,138.4 95.8,139C94.9,139.6 94.5,139.6 93.7,139C92.8,138.4 91.2,137.2 90.6,135.5C90.1,133.8 90,130.2 90.5,128.5C91,126.8 92.7,125.6 93.5,125Z"}, {"id": "abs", "d": "M109.5,128.5C110,130.2 109.9,133.8 109.4,135.5C108.8,137.2 107.2,138.4 106.3,139C105.5,139.6 105.1,139.6 104.2,139C103.4,138.4 101.8,137.2 101.3,135.5C100.8,133.8 100.8,130.2 101.3,128.5C101.8,126.8 103.5,125.6 104.3,125C105.2,124.4 105.6,124.4 106.5,125C107.3,125.6 109,126.8 109.5,128.5Z"}, {"id": "abs", "d": "M93.7,142C94.5,141.4 94.9,141.4 95.8,142C96.6,142.6 98.3,143.4 98.7,145.5C99.2,147.6 99.2,152.4 98.7,154.5C98.2,156.6 96.4,157.4 95.5,158C94.6,158.6 94.1,158.6 93.2,158C92.4,157.4 90.8,156.6 90.4,154.5C90,152.4 90.3,147.6 90.8,145.5C91.3,143.4 92.9,142.6 93.7,142Z"}, {"id": "abs", "d": "M109.2,145.5C109.7,147.6 110,152.4 109.6,154.5C109.2,156.6 107.6,157.4 106.8,158C105.9,158.6 105.4,158.6 104.5,158C103.6,157.4 101.8,156.6 101.3,154.5C100.8,152.4 100.8,147.6 101.3,145.5C101.7,143.4 103.4,142.6 104.2,142C105.1,141.4 105.5,141.4 106.3,142C107.1,142.6 108.7,143.4 109.2,145.5Z"}, {"id": "obliques", "d": "M76.4,108C78.9,105.7 85.7,105.3 87.8,112C89.9,118.7 90.2,139 89.2,148C88.1,157 83.5,165.3 81.5,166C79.5,166.7 78.5,158.7 77.1,152C75.7,145.3 73.4,133.3 73.3,126C73.2,118.7 74,110.3 76.4,108Z"}, {"id": "obliques", "d": "M126.7,126C126.6,133.3 124.3,145.3 122.9,152C121.5,158.7 120.5,166.7 118.5,166C116.5,165.3 111.9,157 110.8,148C109.8,139 110.1,118.7 112.2,112C114.3,105.3 121.1,105.7 123.6,108C126,110.3 126.8,118.7 126.7,126Z"}, {"id": "quads", "d": "M68.2,194C70.4,188.8 77.7,191.7 79.9,199C82.2,206.3 81.6,225.7 81.6,238C81.6,250.3 81.3,268 80,273C78.8,278 76.1,275.2 74,268C71.8,260.8 68,242.3 67.1,230C66.1,217.7 66.1,199.2 68.2,194Z"}, {"id": "quads", "d": "M132.9,230C132,242.3 128.2,260.8 126,268C123.9,275.2 121.2,278 120,273C118.7,268 118.4,250.3 118.4,238C118.4,225.7 117.8,206.3 120.1,199C122.3,191.7 129.6,188.8 131.8,194C133.9,199.2 133.9,217.7 132.9,230Z"}, {"id": "quads", "d": "M83.1,199C85.3,193.5 93.8,195.5 95.8,202C97.8,208.5 95.9,226.2 94.9,238C93.9,249.8 92,267.5 90,273C88,278.5 84.3,277.3 83,271C81.8,264.7 82.6,247 82.6,235C82.6,223 80.9,204.5 83.1,199Z"}, {"id": "quads", "d": "M117.4,235C117.4,247 118.2,264.7 117,271C115.7,277.3 112,278.5 110,273C108,267.5 106.1,249.8 105.1,238C104.1,226.2 102.2,208.5 104.2,202C106.2,195.5 114.7,193.5 116.9,199C119.1,204.5 117.4,223 117.4,235Z"}, {"id": "calves", "d": "M76.3,290C77.9,286.7 82.7,285.3 84.2,289C85.7,292.7 85.8,303.8 85.3,312C84.8,320.2 82.8,334.7 81.4,338C79.9,341.3 77.6,336.8 76.5,332C75.3,327.2 74.5,316 74.5,309C74.5,302 74.7,293.3 76.3,290Z"}, {"id": "calves", "d": "M125.5,309C125.5,316 124.7,327.2 123.5,332C122.4,336.8 120.1,341.3 118.6,338C117.2,334.7 115.2,320.2 114.7,312C114.2,303.8 114.3,292.7 115.8,289C117.3,285.3 122.1,286.7 123.7,290C125.3,293.3 125.5,302 125.5,309Z"}], "f_back": [{"id": "base", "d": "M113.5,30C113.5,32.7 113,35.8 112.1,38.2C111.2,40.7 109.8,43.1 108.3,44.9C106.8,46.6 104.8,47.9 103,48.5C101.1,49.1 98.9,49.1 97,48.5C95.2,47.9 93.2,46.6 91.7,44.9C90.2,43.1 88.8,40.7 87.9,38.2C87,35.8 86.5,32.7 86.5,30C86.5,27.3 86.9,24.2 87.8,21.8C88.6,19.3 90,16.9 91.5,15.1C93,13.4 95,12.1 97,11.5C98.9,10.9 101.1,10.9 103,11.5C105,12.1 107,13.4 108.5,15.1C110,16.9 111.4,19.3 112.2,21.8C113.1,24.2 113.5,27.3 113.5,30Z"}, {"id": "base", "d": "M92.9,42C95.7,38.3 104.3,38.3 107.1,42C109.9,45.7 112.5,60.3 109.7,64C106.9,67.7 93.1,67.7 90.3,64C87.5,60.3 90.1,45.7 92.9,42Z"}, {"id": "base", "d": "M91.2,57C86.2,57.7 83,59.3 78.9,61C74.8,62.7 69.6,64.2 66.6,67C63.5,69.8 61,73.2 60.4,78C59.8,82.8 61.7,89 63.1,96C64.5,103 67,111.7 68.8,120C70.7,128.3 74.4,138 74.1,146C73.8,154 68.2,160.7 67.2,168C66.3,175.3 65,184.7 68.4,190C71.7,195.3 80,198.3 87.3,200C94.7,201.7 105.3,201.7 112.7,200C120,198.3 128.3,195.3 131.6,190C135,184.7 133.7,175.3 132.8,168C131.8,160.7 126.2,154 125.9,146C125.6,138 129.3,128.3 131.2,120C133,111.7 135.5,103 136.9,96C138.3,89 140.2,82.8 139.6,78C139,73.2 136.5,69.8 133.4,67C130.4,64.2 125.2,62.7 121.1,61C117,59.3 113.8,57.7 108.8,57C103.8,56.3 96.2,56.3 91.2,57Z"}, {"id": "base", "d": "M58.6,70C61.4,68.3 66.5,69.3 68.3,74C70.1,78.7 69.5,87.3 69.3,98C69,108.7 68.1,130.7 66.9,138C65.7,145.3 64.1,142 62.1,142C60.1,142 57,143.3 55.1,138C53.1,132.7 50.9,119 50.3,110C49.8,101 50.2,90.7 51.6,84C53,77.3 55.9,71.7 58.6,70Z"}, {"id": "base", "d": "M148.4,84C149.8,90.7 150.2,101 149.7,110C149.1,119 146.9,132.7 144.9,138C143,143.3 139.9,142 137.9,142C135.9,142 134.3,145.3 133.1,138C131.9,130.7 131,108.7 130.7,98C130.5,87.3 129.9,78.7 131.7,74C133.5,69.3 138.6,68.3 141.4,70C144.1,71.7 147,77.3 148.4,84Z"}, {"id": "base", "d": "M54.9,136C59.3,131 66,133.3 66.9,138C67.9,142.7 63.5,154.3 60.8,164C58,173.7 53.4,190.7 50.2,196C47.1,201.3 43.4,200.7 41.7,196C40.1,191.3 38.2,178 40.4,168C42.6,158 50.5,141 54.9,136Z"}, {"id": "base", "d": "M159.6,168C161.8,178 159.9,191.3 158.3,196C156.6,200.7 152.9,201.3 149.8,196C146.6,190.7 142,173.7 139.2,164C136.5,154.3 132.1,142.7 133.1,138C134,133.3 140.7,131 145.1,136C149.5,141 157.4,158 159.6,168Z"}, {"id": "base", "d": "M52.7,206C52.8,207.4 52.6,209 52.2,210.3C51.9,211.6 51.2,212.9 50.5,213.8C49.8,214.7 48.8,215.4 47.9,215.7C46.9,216.1 45.8,216.1 44.9,215.7C43.9,215.4 42.9,214.7 42,213.8C41.2,212.9 40.5,211.6 40,210.3C39.5,209 39.2,207.4 39.1,206C39,204.6 39.2,203 39.5,201.7C39.9,200.4 40.5,199.1 41.3,198.2C42,197.3 43,196.6 43.9,196.3C44.9,195.9 46,195.9 47,196.3C48,196.6 49,197.3 49.8,198.2C50.7,199.1 51.4,200.4 51.9,201.7C52.4,203 52.7,204.6 52.7,206Z"}, {"id": "base", "d": "M148.1,201.7C148.6,200.4 149.3,199.1 150.2,198.2C151,197.3 152,196.6 153,196.3C154,195.9 155.1,195.9 156.1,196.3C157,196.6 158,197.3 158.7,198.2C159.5,199.1 160.1,200.4 160.5,201.7C160.8,203 161,204.6 160.9,206C160.8,207.4 160.5,209 160,210.3C159.5,211.6 158.8,212.9 158,213.8C157.1,214.7 156.1,215.4 155.1,215.7C154.2,216.1 153.1,216.1 152.1,215.7C151.2,215.4 150.2,214.7 149.5,213.8C148.8,212.9 148.1,211.6 147.8,210.3C147.4,209 147.2,207.4 147.3,206C147.3,204.6 147.6,203 148.1,201.7Z"}, {"id": "base", "d": "M66.8,178C72.7,173.7 93.8,180 99,186C104.1,192 98.6,203 97.9,214C97.2,225 96.1,240 94.9,252C93.8,264 94.2,280.3 91.1,286C88,291.7 80,291.7 76.3,286C72.5,280.3 70.8,264.3 68.6,252C66.5,239.7 63.7,224.3 63.4,212C63.1,199.7 60.9,182.3 66.8,178Z"}, {"id": "base", "d": "M136.6,212C136.3,224.3 133.5,239.7 131.4,252C129.2,264.3 127.5,280.3 123.7,286C120,291.7 112,291.7 108.9,286C105.8,280.3 106.2,264 105.1,252C103.9,240 102.8,225 102.1,214C101.4,203 95.9,192 101,186C106.2,180 127.3,173.7 133.2,178C139.1,182.3 136.9,199.7 136.6,212Z"}, {"id": "base", "d": "M75.2,280C78.4,275 90.1,276 93,280C96,284 93.8,292.3 93.1,304C92.5,315.7 91.5,342.3 89.2,350C86.9,357.7 82,356.7 79.4,350C76.8,343.3 74.2,321.7 73.5,310C72.8,298.3 71.9,285 75.2,280Z"}, {"id": "base", "d": "M126.5,310C125.8,321.7 123.2,343.3 120.6,350C118,356.7 113.1,357.7 110.8,350C108.5,342.3 107.5,315.7 106.9,304C106.2,292.3 104,284 107,280C109.9,276 121.6,275 124.8,280C128.1,285 127.2,298.3 126.5,310Z"}, {"id": "base", "d": "M77.5,346C81.1,344.5 88.6,344.3 91.2,346C93.8,347.7 93.6,353.3 93.1,356C92.7,358.7 92.3,361 88.2,362C84.2,363 71.7,363.2 68.6,362C65.5,360.8 68.2,357.7 69.6,355C71.1,352.3 73.9,347.5 77.5,346Z"}, {"id": "base", "d": "M130.4,355C131.8,357.7 134.5,360.8 131.4,362C128.3,363.2 115.8,363 111.8,362C107.7,361 107.3,358.7 106.9,356C106.4,353.3 106.2,347.7 108.8,346C111.4,344.3 118.9,344.5 122.5,346C126.1,347.5 128.9,352.3 130.4,355Z"}, {"id": "hair", "d": "M85.6,30C85.4,25 84.9,17.5 87.3,14C89.7,10.5 95.8,9 100,9C104.2,9 110.3,10.5 112.7,14C115.1,17.5 114.6,25 114.4,30C114.2,35 112.8,39.3 111.6,44C110.4,48.7 108.4,53.3 107.1,58C105.7,62.7 104.7,69 103.5,72C102.3,75 101.2,76 100,76C98.8,76 97.7,75 96.5,72C95.3,69 94.3,62.7 92.9,58C91.6,53.3 89.6,48.7 88.4,44C87.2,39.3 85.8,35 85.6,30Z"}, {"id": "traps", "d": "M100,52C102.3,52 102.6,56.2 107,59C111.4,61.8 125.2,64.5 126.4,69C127.6,73.5 117.6,77.8 114.1,86C110.5,94.2 107.5,111.3 105.2,118C102.9,124.7 101.7,126 100,126C98.3,126 97.1,124.7 94.8,118C92.5,111.3 89.5,94.2 85.9,86C82.4,77.8 72.4,73.5 73.6,69C74.8,64.5 88.6,61.8 93,59C97.4,56.2 97.7,52 100,52Z"}, {"id": "shoulders", "d": "M64.8,69C67.4,66.8 73.6,65.2 75.4,67C77.1,68.8 76.4,75.3 75.4,80C74.3,84.7 71.4,93 69.2,95C67,97 63.8,94.5 62.2,92C60.5,89.5 59.1,83.8 59.5,80C60,76.2 62.2,71.2 64.8,69Z"}, {"id": "shoulders", "d": "M140.5,80C140.9,83.8 139.5,89.5 137.8,92C136.2,94.5 133,97 130.8,95C128.6,93 125.7,84.7 124.6,80C123.6,75.3 122.9,68.8 124.6,67C126.4,65.2 132.6,66.8 135.2,69C137.8,71.2 140,76.2 140.5,80Z"}, {"id": "lats", "d": "M71.9,96C73.7,90.3 80.2,88.3 84.2,92C88.1,95.7 93.6,110.7 95.7,118C97.7,125.3 98,129.5 96.6,136C95.2,142.5 90.5,154.7 87.5,157C84.5,159.3 80.8,155.2 78.4,150C76.1,144.8 74.4,135 73.3,126C72.2,117 70,101.7 71.9,96Z"}, {"id": "lats", "d": "M126.7,126C125.6,135 123.9,144.8 121.6,150C119.2,155.2 115.5,159.3 112.5,157C109.5,154.7 104.8,142.5 103.4,136C102,129.5 102.3,125.3 104.3,118C106.4,110.7 111.9,95.7 115.8,92C119.8,88.3 126.3,90.3 128.1,96C130,101.7 127.8,117 126.7,126Z"}, {"id": "triceps", "d": "M58.6,92C60.8,89 65.9,90.7 67.4,95C69,99.3 68.5,111.3 67.9,118C67.4,124.7 65.8,132.3 64.2,135C62.6,137.7 59.7,137.7 58.2,134C56.6,130.3 54.7,120 54.8,113C54.9,106 56.5,95 58.6,92Z"}, {"id": "triceps", "d": "M145.2,113C145.3,120 143.4,130.3 141.8,134C140.3,137.7 137.4,137.7 135.8,135C134.2,132.3 132.6,124.7 132.1,118C131.5,111.3 131,99.3 132.6,95C134.1,90.7 139.2,89 141.4,92C143.5,95 145.1,106 145.2,113Z"}, {"id": "forearms", "d": "M54.5,141C57.8,136.8 62.7,137.8 63.7,141C64.7,144.2 62.8,152 60.4,160C58,168 52.4,184.2 49.5,189C46.6,193.8 44.2,192.8 43.2,189C42.2,185.2 41.5,174 43.4,166C45.3,158 51.1,145.2 54.5,141Z"}, {"id": "forearms", "d": "M156.6,166C158.5,174 157.8,185.2 156.8,189C155.8,192.8 153.4,193.8 150.5,189C147.6,184.2 142,168 139.6,160C137.2,152 135.3,144.2 136.3,141C137.3,137.8 142.2,136.8 145.5,141C148.9,145.2 154.7,158 156.6,166Z"}, {"id": "lowerback", "d": "M91.5,140C93.6,136 97.6,130 98.7,136C99.9,142 100.1,169 98.4,176C96.8,183 90.6,180.7 88.6,178C86.5,175.3 85.7,166.3 86.2,160C86.7,153.7 89.5,144 91.5,140Z"}, {"id": "lowerback", "d": "M113.8,160C114.3,166.3 113.5,175.3 111.4,178C109.4,180.7 103.2,183 101.6,176C99.9,169 100.1,142 101.3,136C102.4,130 106.4,136 108.5,140C110.5,144 113.3,153.7 113.8,160Z"}, {"id": "glutes", "d": "M73.1,176C78.1,174.3 94.2,177.2 98.4,182C102.7,186.8 99.9,199.7 98.4,205C96.9,210.3 93.7,213.3 89.6,214C85.5,214.7 77.4,212.7 73.8,209C70.3,205.3 68.4,197.5 68.3,192C68.2,186.5 68.1,177.7 73.1,176Z"}, {"id": "glutes", "d": "M131.7,192C131.6,197.5 129.7,205.3 126.2,209C122.6,212.7 114.5,214.7 110.4,214C106.3,213.3 103.1,210.3 101.6,205C100.1,199.7 97.3,186.8 101.6,182C105.8,177.2 121.9,174.3 126.9,176C131.9,177.7 131.8,186.5 131.7,192Z"}, {"id": "hamstrings", "d": "M68.7,214C71,210 80,212 82.3,218C84.7,224 83.1,240 82.8,250C82.4,260 81.7,274.3 80.1,278C78.5,281.7 75,278 73,272C71.1,266 69.1,251.7 68.4,242C67.7,232.3 66.4,218 68.7,214Z"}, {"id": "hamstrings", "d": "M131.6,242C130.9,251.7 128.9,266 127,272C125,278 121.5,281.7 119.9,278C118.3,274.3 117.6,260 117.2,250C116.9,240 115.3,224 117.7,218C120,212 129,210 131.3,214C133.6,218 132.3,232.3 131.6,242Z"}, {"id": "hamstrings", "d": "M85.4,218C87.3,212.5 94.2,209.3 95.8,214C97.4,218.7 95.9,235.3 94.9,246C94,256.7 91.9,273 90.1,278C88.2,283 84.9,281.2 84.1,276C83.2,270.8 84.5,256.7 84.8,247C85,237.3 83.6,223.5 85.4,218Z"}, {"id": "hamstrings", "d": "M115.2,247C115.5,256.7 116.8,270.8 115.9,276C115.1,281.2 111.8,283 109.9,278C108.1,273 106,256.7 105.1,246C104.1,235.3 102.6,218.7 104.2,214C105.8,209.3 112.7,212.5 114.6,218C116.4,223.5 115,237.3 115.2,247Z"}, {"id": "calves", "d": "M75.3,286C77.2,283.5 82.7,282.7 84.2,287C85.7,291.3 85,304.5 84.3,312C83.7,319.5 82,330 80.4,332C78.8,334 75.8,329 74.5,324C73.2,319 72.4,308.3 72.6,302C72.7,295.7 73.3,288.5 75.3,286Z"}, {"id": "calves", "d": "M127.4,302C127.6,308.3 126.8,319 125.5,324C124.2,329 121.2,334 119.6,332C118,330 116.3,319.5 115.7,312C115,304.5 114.3,291.3 115.8,287C117.3,282.7 122.8,283.5 124.7,286C126.7,288.5 127.3,295.7 127.4,302Z"}, {"id": "calves", "d": "M85.2,287C86.3,284.3 90.8,283.5 92.1,286C93.4,288.5 93.6,295.7 93.1,302C92.7,308.3 90.7,321 89.2,324C87.8,327 85,323.7 84.3,320C83.7,316.3 85.2,307.5 85.3,302C85.4,296.5 84,289.7 85.2,287Z"}, {"id": "calves", "d": "M114.7,302C114.8,307.5 116.3,316.3 115.7,320C115,323.7 112.2,327 110.8,324C109.3,321 107.3,308.3 106.9,302C106.4,295.7 106.6,288.5 107.9,286C109.2,283.5 113.7,284.3 114.8,287C116,289.7 114.6,296.5 114.7,302Z"}]};
+// Mascottes originales : gorille "Gogo" et kangourou "Kiki".
+// mood : "happy" | "cheer" | "sad" | "sleep"
+// pose : "flex" (muscles) | "wave" (salut) | "point" (montre à droite) | "cheer" (bras en l'air) | "rest" (sieste)
+function mascotSvg(kind, size = 120, mood = "happy", pose = "flex") {
+  if (pose === "rest") mood = "sleep";
+  const mouth = {
+    happy: '<path d="M52 61 Q60 68 68 61" stroke="#2B2B2B" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+    cheer: '<path d="M51 59 Q60 73 69 59 Z" fill="#7A1F1F"/><path d="M55 64 Q60 68 65 64" fill="#E86B6B"/>',
+    sad: '<path d="M53 65 Q60 60 67 65" stroke="#2B2B2B" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+    sleep: '<ellipse cx="60" cy="62" rx="3" ry="2.4" fill="#5A2A2A"/>',
+  }[mood];
+  const zz = pose === "rest"
+    ? '<g fill="#7FB2FF" font-family="Barlow Condensed, sans-serif" font-weight="800"><text x="88" y="22" font-size="14">z</text><text x="97" y="12" font-size="10">z</text></g>' : "";
+  const arm = (d, col, w) => `<path d="${d}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
+
+  if (kind === "gorilla") {
+    const C = "#3D3D45";
+    const hand = (x, y, r = 8) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${C}"/>`;
+    const A = {
+      downL: arm("M34 72 Q22 86 25 104", C, 15) + hand(25, 106),
+      downR: arm("M86 72 Q98 86 95 104", C, 15) + hand(95, 106),
+      flexL: arm("M34 72 Q14 72 18 48", C, 15) + hand(19, 40, 9) + '<path d="M14 58 Q19 52 26 56" stroke="#55555E" stroke-width="2.5" fill="none" stroke-linecap="round"/>',
+      upL: arm("M34 70 Q22 50 16 30", C, 15) + hand(15, 24, 9),
+      upR: arm("M86 70 Q98 50 104 30", C, 15) + hand(105, 24, 9),
+      waveR: arm("M86 70 Q100 56 102 36", C, 15) + `<path d="M96 30 L94 18 M101 28 L101 15 M106 29 L109 17 M109 34 L116 26" stroke="${C}" stroke-width="5" stroke-linecap="round"/>` + hand(102, 32, 9),
+      pointR: arm("M86 74 Q100 72 108 68", C, 15) + hand(110, 67, 7) + `<path d="M114 66 L120 64" stroke="${C}" stroke-width="5" stroke-linecap="round"/>`,
+      crossed: arm("M34 76 Q48 98 84 90", C, 14) + arm("M86 76 Q72 98 36 90", C, 14),
+    };
+    const AM = { flex: A.flexL + A.downR, wave: A.downL + A.waveR, point: A.downL + A.pointR, cheer: A.upL + A.upR, rest: "" };
+    const arms = pose in AM ? AM[pose] : AM.flex;
+    const eyes = mood === "sleep"
+      ? '<path d="M48 41 Q52 44 56 41 M64 41 Q68 44 72 41" stroke="#1E1E1E" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+      : `<ellipse cx="52" cy="40" rx="4.6" ry="5.2" fill="#fff"/><ellipse cx="68" cy="40" rx="4.6" ry="5.2" fill="#fff"/>
+         <circle cx="${pose === "point" ? 54 : 53}" cy="41" r="2.6" fill="#1E1E1E"/><circle cx="${pose === "point" ? 70 : 67}" cy="41" r="2.6" fill="#1E1E1E"/>
+         <circle cx="54" cy="40" r=".9" fill="#fff"/><circle cx="69" cy="40" r=".9" fill="#fff"/>`;
+    return `<svg viewBox="0 0 120 120" width="${size}" height="${size}" aria-label="Gogo le gorille">
+      <ellipse cx="60" cy="114" rx="34" ry="4" fill="rgba(0,0,0,.12)"/>
+      <path d="M28 70 C28 54 44 50 60 50 C76 50 92 54 92 70 L94 104 C94 110 88 112 82 112 L38 112 C32 112 26 110 26 104 Z" fill="${C}"/>
+      <path d="M42 74 C42 64 52 62 60 62 C68 62 78 64 78 74 L78 98 C78 104 72 106 60 106 C48 106 42 104 42 98 Z" fill="#6E6A72"/>
+      <path d="M60 66 L60 100 M47 82 Q60 86 73 82" stroke="#5C5860" stroke-width="2" fill="none"/>
+      ${pose === "rest" ? A.crossed : ""}${arms}
+      <circle cx="35" cy="38" r="7" fill="${C}"/><circle cx="85" cy="38" r="7" fill="${C}"/>
+      <circle cx="35" cy="38" r="3.5" fill="#8A8590"/><circle cx="85" cy="38" r="3.5" fill="#8A8590"/>
+      <path d="M36 34 C36 16 46 10 60 10 C74 10 84 16 84 34 C84 52 76 66 60 66 C44 66 36 52 36 34 Z" fill="${C}"/>
+      <path d="M44 42 C44 32 52 30 56 34 C58 36 62 36 64 34 C68 30 76 32 76 42 C78 58 70 64 60 64 C50 64 42 58 44 42 Z" fill="#B9AFA8"/>
+      <path d="M37 26 C46 20 74 20 83 26 L83 32 C74 27 46 27 37 32 Z" fill="#FF6B1A"/>
+      <path d="M83 27 L94 22 L92 30 Z M83 30 L93 34 L88 37 Z" fill="#FF6B1A"/>
+      ${eyes}
+      <path d="M47 34 Q52 31 57 34 M63 34 Q68 31 73 34" stroke="#2B2B2B" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <ellipse cx="57" cy="52" rx="1.6" ry="1.2" fill="#5A4E48"/><ellipse cx="63" cy="52" rx="1.6" ry="1.2" fill="#5A4E48"/>
+      <g transform="translate(0,-2)">${mouth}</g>${zz}
+    </svg>`;
+  }
+
+  // ---------------- kangourou
+  const K = "#D98B4A";
+  const glove = (x, y) => `<circle cx="${x}" cy="${y}" r="9" fill="#E53935"/><path d="${`M${x - 6} ${y - 2} Q${x} ${y - 6} ${x + 6} ${y - 2}`}" stroke="#FF8A80" stroke-width="2" fill="none"/>`;
+  const G = {
+    boxL: arm("M40 70 C32 66 26 58 26 52", K, 7) + glove(25, 46),
+    downR: arm("M80 72 C88 74 92 80 92 86", K, 7) + glove(93, 90),
+    downL: arm("M40 72 C32 74 28 80 28 86", K, 7) + glove(27, 90),
+    upL: arm("M40 68 C32 56 26 42 24 32", K, 7) + glove(23, 26),
+    upR: arm("M80 68 C88 56 94 42 96 32", K, 7) + glove(97, 26),
+    pointR: arm("M80 72 C90 70 98 66 104 64", K, 7) + glove(108, 62),
+    hug: arm("M40 74 C44 82 48 84 52 84", K, 7) + arm("M80 74 C76 82 72 84 68 84", K, 7) + glove(52, 86) + glove(68, 86),
+  };
+  const arms = { flex: G.boxL + G.downR, wave: G.downL + G.upR, point: G.downL + G.pointR, cheer: G.upL + G.upR, rest: G.hug }[pose] || G.boxL + G.downR;
+  const eyes = mood === "sleep"
+    ? '<path d="M47 37 Q51 40 55 37 M65 37 Q69 40 73 37" stroke="#1E1E1E" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
+    : `<ellipse cx="51" cy="36" rx="4.4" ry="5" fill="#fff"/><ellipse cx="69" cy="36" rx="4.4" ry="5" fill="#fff"/>
+       <circle cx="${pose === "point" ? 53 : 52}" cy="37" r="2.6" fill="#1E1E1E"/><circle cx="${pose === "point" ? 70 : 68}" cy="37" r="2.6" fill="#1E1E1E"/>
+       <circle cx="53" cy="36" r=".9" fill="#fff"/><circle cx="69" cy="36" r=".9" fill="#fff"/>`;
+  const jump = pose === "cheer" ? ' transform="translate(0,-6)"' : "";
+  return `<svg viewBox="0 0 120 120" width="${size}" height="${size}" aria-label="Kiki le kangourou">
+    <ellipse cx="60" cy="114" rx="${pose === "cheer" ? 26 : 34}" ry="4" fill="rgba(0,0,0,.12)"/>
+    <g${jump}>
+    <path d="M78 98 C96 100 108 106 114 112 C104 112 92 110 76 106 Z" fill="#C97A3D"/>
+    <path d="M40 100 C34 106 30 110 26 112 L52 112 C52 106 50 102 48 100 Z" fill="#C97A3D"/>
+    <path d="M80 100 C86 106 90 110 94 112 L68 112 C68 106 70 102 72 100 Z" fill="#C97A3D"/>
+    <path d="M38 76 C38 58 48 52 60 52 C72 52 82 58 82 76 L82 98 C82 106 72 108 60 108 C48 108 38 106 38 98 Z" fill="${K}"/>
+    <path d="M47 76 C47 66 53 62 60 62 C67 62 73 66 73 76 L73 96 C73 102 67 104 60 104 C53 104 47 102 47 96 Z" fill="#F5D9B5"/>
+    <path d="M50 88 Q60 94 70 88" stroke="#E2B98D" stroke-width="2" fill="none"/>
+    <path d="M44 30 C36 18 36 4 42 2 C48 4 52 18 52 28 Z" fill="${K}"/>
+    <path d="M45 26 C41 18 41 9 43 7 C46 10 48 18 49 26 Z" fill="#F2B38A"/>
+    <path d="${pose === "rest" ? "M76 30 C88 24 96 14 96 8 C88 6 72 18 68 28 Z" : "M76 30 C84 18 84 4 78 2 C72 4 68 18 68 28 Z"}" fill="${K}"/>
+    <path d="M40 40 C40 26 48 20 60 20 C72 20 80 26 80 40 C80 52 74 60 60 60 C46 60 40 52 40 40 Z" fill="${K}"/>
+    <path d="M48 48 C48 42 54 40 60 40 C66 40 72 42 72 48 C72 58 66 64 60 64 C54 64 48 58 48 48 Z" fill="#F5D9B5"/>
+    <ellipse cx="60" cy="47" rx="4.2" ry="3" fill="#3A2A20"/>
+    ${eyes}
+    <g transform="translate(0,-4)">${mouth}</g>
+    ${arms}
+    </g>${zz}
+  </svg>`;
+}
+
+
+// =============================================================== icônes
+const IC = {
+  flame: '<path d="M12 2.5c1.2 3.2 5.5 5.3 5.5 10.5a5.5 5.5 0 0 1-11 0c0-2.3 1.1-3.9 2.2-5 0 2.1 1 3.3 2.3 3.4-1-3.2-.2-6.3 1-8.9z"/>',
+  bolt: '<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z"/>',
+  shield: '<path d="M12 3l7 3v6c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6z"/>',
+  home: '<path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/>',
+  dumbbell: '<path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.4-3.8 4.2-5.8 7.5-5.8s6.1 2 7.5 5.8"/>',
+  play: '<path d="M8 5.5v13l10.5-6.5z"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  x: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  left: '<path d="M15 5.5 8.5 12l6.5 6.5"/>',
+  right: '<path d="M9 5.5 15.5 12 9 18.5"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  ext: '<path d="M14 4h6v6M20 4l-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  moon: '<path d="M19.5 14.5A8 8 0 1 1 9.5 4.5a6.5 6.5 0 0 0 10 10z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  sprout: '<path d="M12 21v-9M12 12c0-4-3-6.5-7-6.5 0 4 3 6.5 7 6.5zM12 12c0-3.5 2.5-6 6.5-6 0 3.5-2.5 6-6.5 6z"/>',
+  refresh: '<path d="M4.5 12a7.5 7.5 0 0 1 13-5.1L20 9.5M20 4.5v5h-5M19.5 12a7.5 7.5 0 0 1-13 5.1L4 14.5M4 19.5v-5h5"/>',
+  trend: '<path d="M3.5 17.5 9.5 11l4 4 7-8M15 7h5.5v5.5"/>',
+  bell: '<path d="M6 16.5v-5a6 6 0 0 1 12 0v5l1.5 1.5h-15zM10 21h4"/>',
+  timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M9.5 2.5h5"/>',
+};
+const ico = (n, cls = "") => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+
+// =============================================================== sons & vibrations (générés par le code : gratuits)
+let AC = null;
+function tone(f, t0, dur, type = "sine", vol = 0.18, f2 = null) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, AC.currentTime + t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, AC.currentTime + t0 + dur);
+  g.gain.setValueAtTime(0.0001, AC.currentTime + t0);
+  g.gain.exponentialRampToValueAtTime(vol, AC.currentTime + t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + t0 + dur);
+  o.connect(g).connect(AC.destination); o.start(AC.currentTime + t0); o.stop(AC.currentTime + t0 + dur + 0.02);
+}
+function sfx(name) {
+  if (!P || !P.settings.sound) return;
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); } catch (e) { return; }
+  const N = { C5: 523.3, E5: 659.3, G5: 784, A5: 880, C6: 1046.5, E6: 1318.5, G6: 1568 };
+  const vib = p => { try { if (NATIVE) NATIVE.vibrate(JSON.stringify(p)); else if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
+  switch (name) {
+    case "tap": tone(520, 0, 0.07, "sine", 0.1, 760); break;
+    case "step": tone(N.G5, 0, 0.09, "triangle", 0.16); tone(N.C6, 0.08, 0.16, "triangle", 0.16); vib(30); break;
+    case "beep": tone(N.A5, 0, 0.09, "square", 0.05); break;
+    case "go": tone(N.E6, 0, 0.22, "square", 0.06); vib(60); break;
+    case "tick": tone(1400 + Math.random() * 200, 0, 0.03, "triangle", 0.05); break;
+    case "win": [N.C5, N.E5, N.G5, N.C6].forEach((f, i) => tone(f, i * 0.09, 0.22, "triangle", 0.17)); tone(N.E6, 0.38, 0.5, "sine", 0.12); tone(N.G6, 0.44, 0.45, "sine", 0.08); vib([40, 60, 40, 60, 120]); break;
+    case "level": [N.C5, N.G5, N.C6, N.E6, N.G6].forEach((f, i) => tone(f, i * 0.07, 0.3, "triangle", 0.15)); tone(N.C6, 0.4, 0.7, "sine", 0.12); vib([80, 40, 160]); break;
+    case "chest": for (let i = 0; i < 9; i++) tone(1046 * Math.pow(1.122, i), i * 0.045, 0.16, "sine", 0.09); tone(N.C6, 0.45, 0.6, "triangle", 0.14); vib([30, 30, 30, 30, 200]); break;
+    case "notif": tone(N.E6, 0, 0.12, "sine", 0.12); tone(N.C6, 0.12, 0.2, "sine", 0.12); break;
+  }
+}
+
+// =============================================================== utilitaires
+const pad = n => String(n).padStart(2, "0");
+const fmtMin = m => pad(Math.floor(m / 60)) + ":" + pad(m % 60);
+const epochDay = d => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+const fromEpochDay = e => { const u = new Date(e * 86400000); return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate()); };
+const dow = d => ((d.getDay() + 6) % 7) + 1;
+const dowE = e => ((e + 3) % 7 + 7) % 7 + 1;          // jour de la semaine d'un epochDay (1 = lundi)
+const weekOf = e => Math.floor((e + 3) / 7);            // numéro de semaine (lundi -> dimanche)
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addMin = (d, m) => new Date(d.getTime() + m * 60000);
+const minOfDay = d => d.getHours() * 60 + d.getMinutes();
+const DAY_LETTERS = ["L","M","M","J","V","S","D"];
+const DAY_SHORT = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+const DAYS_FULL = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+const dayFmt = d => d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+const hm = d => pad(d.getHours()) + ":" + pad(d.getMinutes());
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const toMin = v => { const [h, m] = (v || "0:0").split(":").map(Number); return h * 60 + m; };
+function fmtDateTime(d) {
+  const t = epochDay(S.now), e = epochDay(d);
+  if (e === t) return "aujourd'hui à " + hm(d);
+  if (e === t + 1) return "demain à " + hm(d);
+  return dayFmt(d) + " à " + hm(d);
+}
+function daysLabel(days) {
+  const k = [...days].sort().join("");
+  if (k === "12345") return "du lundi au vendredi";
+  if (k === "1234567") return "tous les jours";
+  return [...days].sort().map(x => DAY_SHORT[x - 1].toLowerCase()).join(", ");
+}
+const muscleName = id => (MUSCLES.find(m => m.id === id) || {}).name || id;
+const demoUrl = en => "https://www.google.com/search?q=" + encodeURIComponent("musclewiki " + en);
+
+// =============================================================== programme (conseils de coachs)
+// Objectif -> difficulté. Nombre de jours -> type de programme (corps entier, haut/bas, poussée/tirage/jambes).
+const GOALS = {
+  start:   { icon: "sprout",  name: "Commencer le sport",     desc: "Je n'ai jamais (ou presque) fait de sport", scale: 0.7,  maxDiff: l => l >= 5 ? 2 : 1, rounds: l => l < 4 ? 2 : 3, days: [1,3,5] },
+  restart: { icon: "refresh", name: "Reprendre le sport",     desc: "J'en ai déjà fait, je m'y remets",          scale: 0.85, maxDiff: l => l >= 4 ? 3 : 2, rounds: l => l < 3 ? 2 : l < 8 ? 3 : 4, days: [1,3,5] },
+  improve: { icon: "trend",   name: "Améliorer ma condition", desc: "Je bouge déjà, je veux progresser",          scale: 1.15, maxDiff: () => 3,         rounds: l => l < 3 ? 3 : 4, days: [1,2,4,5] },
+};
+const SPLITS = {
+  full: { name: "Corps entier", seq: ["full"], why: "Avec 2 ou 3 séances par semaine, les coachs conseillent de travailler tout le corps à chaque fois. Chaque muscle est ainsi sollicité 2 à 3 fois par semaine, avec au moins un jour de repos entre deux séances." },
+  ul:   { name: "Haut / Bas", seq: ["upper", "lower"], why: "Avec 4 séances, on alterne haut du corps et bas du corps. Chaque muscle travaille 2 fois par semaine et se repose pendant que l'autre moitié travaille." },
+  ppl:  { name: "Poussée / Tirage / Jambes", seq: ["push", "pull", "legs"], why: "À partir de 5 séances, on sépare les muscles qui poussent, ceux qui tirent et les jambes. Ça permet plus de volume par muscle tout en gardant 48 h de récupération." },
+};
+const SESSIONS = {
+  full:  { name: "Corps entier", slots: [["quads","glutes"], ["chest","shoulders"], ["lats"], ["abs","obliques"], ["hamstrings","glutes","calves","triceps","biceps"]] },
+  upper: { name: "Haut du corps", slots: [["chest"], ["lats"], ["shoulders"], ["triceps","biceps"], ["abs","traps","forearms"]] },
+  lower: { name: "Bas du corps", slots: [["quads"], ["glutes"], ["hamstrings"], ["calves"], ["abs","obliques","lowerback"]] },
+  push:  { name: "Poussée", slots: [["chest"], ["shoulders"], ["triceps"], ["chest","shoulders"], ["abs"]] },
+  pull:  { name: "Tirage", slots: [["lats"], ["traps","lowerback"], ["biceps"], ["lats","forearms"], ["obliques"]] },
+  legs:  { name: "Jambes", slots: [["quads"], ["hamstrings"], ["glutes"], ["calves"], ["abs"]] },
+};
+const sessionMuscles = t => [...new Set(SESSIONS[t].slots.flat())];
+const MOBILITY = [
+  { name: "Chat-vache", en: "cat cow stretch", amount: "45 s" },
+  { name: "Étirement des ischios", en: "hamstring stretch", amount: "30 s par jambe" },
+  { name: "Fente basse (hanches)", en: "kneeling hip flexor stretch", amount: "30 s par côté" },
+  { name: "Rotation du buste au sol", en: "thoracic rotation", amount: "8 par côté" },
+  { name: "Étirement des pectoraux au mur", en: "doorway chest stretch", amount: "30 s par côté" },
+  { name: "Posture de l'enfant", en: "child pose", amount: "45 s" },
+];
+const MASCOTS = { gorilla: { name: "Gogo", full: "Gogo le gorille", sub: "Costaud et motivant" }, kangaroo: { name: "Kiki", full: "Kiki le kangourou", sub: "Énergique et sautillant" } };
+const coach = () => MASCOTS[P.mascot] || MASCOTS.gorilla;
+const ITEMS = {
+  glasses: { name: "Lunettes de soleil" },
+  medal:   { name: "Médaille d'or" },
+  cap:     { name: "Casquette" },
+  crown:   { name: "Couronne" },
+};
+// récompense de chaque coffre (un coffre toutes les 5 séances)
+const CHEST_REWARDS = [{ item: "glasses" }, { joker: 1 }, { item: "medal" }, { item: "cap" }, { joker: 1 }, { item: "crown" }];
+const rewardFor = i => CHEST_REWARDS[i] || (i % 2 ? { joker: 1 } : { xp: 100 });
+const rewardLabel = r => r.item ? ITEMS[r.item].name : r.joker ? "1 joker en plus" : `${r.xp} XP bonus`;
+function accessories(kind, list) {
+  const ey = kind === "gorilla" ? 40 : 36, top = kind === "gorilla" ? 12 : 22;
+  let a = "";
+  if (list.includes("medal")) a += `<path d="M52 60 L60 76 L68 60" stroke="#3D6FD1" stroke-width="5" fill="none" stroke-linejoin="round"/><circle cx="60" cy="80" r="7" fill="#FFC93C" stroke="#D99A00" stroke-width="2"/><path d="M57.5 80 l2 2 3.5-4" stroke="#D99A00" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+  if (list.includes("glasses")) a += `<rect x="44" y="${ey - 5}" width="14" height="10" rx="4" fill="#15171C"/><rect x="62" y="${ey - 5}" width="14" height="10" rx="4" fill="#15171C"/><path d="M58 ${ey - 1} h4" stroke="#15171C" stroke-width="2.4"/><path d="M47 ${ey - 3} l4 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/><path d="M65 ${ey - 3} l4 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>`;
+  if (list.includes("cap")) a += `<path d="M${kind === "gorilla" ? "38 26 C38 10 48 6 60 6 C72 6 82 10 82 26 Z" : "46 30 C46 18 52 14 60 14 C68 14 74 18 74 30 Z"}" fill="#22B573"/><path d="M${kind === "gorilla" ? "74 24 L96 26 C96 30 86 31 74 29 Z" : "68 28 L86 30 C86 34 78 34 68 32 Z"}" fill="#1A8F5A"/><circle cx="60" cy="${kind === "gorilla" ? 7 : 15}" r="2.4" fill="#1A8F5A"/>`;
+  if (list.includes("crown")) a += `<path d="M47 ${top + 2} L50 ${top - 10} L55 ${top - 3} L60 ${top - 13} L65 ${top - 3} L70 ${top - 10} L73 ${top + 2} Z" fill="#FFC93C" stroke="#D99A00" stroke-width="1.6" stroke-linejoin="round"/><circle cx="60" cy="${top - 2}" r="2" fill="#E5484D"/>`;
+  return a;
+}
+// la mascotte porte les accessoires équipés
+function mascot(size, mood = "happy", pose = "flex", kind = P.mascot) {
+  const svg = mascotSvg(kind, size, mood, pose), acc = accessories(kind, P.profile.equipped || []);
+  return acc ? svg.replace(/<\/svg>\s*$/, acc + "</svg>") : svg;
+}
+
+// =============================================================== état
+function fresh() {
+  const now = new Date(); now.setSeconds(0, 0);
+  return {
+    v: 3,
+    profile: { xp: 0, bestStreak: 0, jokers: 1, lastJokerRefillWeek: -1, totalSessions: 0, history: [], jokerDays: [], lastEval: epochDay(now) - 1,
+               steps: 0, chestsOpened: 0, items: [], equipped: [], weekBonus: -1, trainDays: [] },
+    settings: { windowStartMin: 17 * 60, windowEndMin: 22 * 60, repeatEveryMin: 60, vacation: false, remindersOn: true, dumbbells: true, sound: true, tips: true },
+    mascot: "gorilla", sex: "m", goal: "start", days: [1,3,5], priority: [], disliked: [],
+    recurring: APP ? [] : [1,2,3,4,5].map(d => ({ id: d, days: [d], startMin: 8 * 60, endMin: 17 * 60, label: "Travail (exemple)" })),
+    oneOff: [], remind: { day: -1, count: 0 },
+    now: now.getTime(), scheduled: null, log: [], onboarded: false, obStep: 0, obIntro: 0,
+  };
+}
+let P;
+try { P = JSON.parse(localStorage.getItem("sportxp-sim-v3") || "null"); } catch (e) { P = null; }
+if (!P || P.v !== 3) P = fresh();
+if (!P.disliked) P.disliked = [];
+{ const pr = P.profile; pr.steps ??= 0; pr.chestsOpened ??= 0; pr.items ??= []; pr.equipped ??= []; pr.weekBonus ??= -1; pr.trainDays ??= []; P.settings.sound ??= true; P.settings.tips ??= true; P.tipShown ??= -1; }
+const S = { get now() { return VNOW != null ? new Date(VNOW) : APP ? new Date() : new Date(P.now); }, tour: null, introFrom: null, tab: 0, mini: false, view: "front", notif: null, dialog: null, sheet: null, player: null, finish: null };
+function save() { try { localStorage.setItem("sportxp-sim-v3", JSON.stringify(P)); } catch (e) {} if (APP) syncNative(); }
+function log(txt) { P.log.unshift({ t: P.now, txt }); P.log = P.log.slice(0, 80); }
+
+// =============================================================== logique de jeu
+const isTraining = e => P.days.includes(dowE(e));
+const splitKey = () => P.days.length <= 3 ? "full" : P.days.length === 4 ? "ul" : "ppl";
+function sessionTypeFor(e) {
+  if (!isTraining(e)) return null;
+  const days = [...P.days].sort();
+  const k = days.indexOf(dowE(e));
+  const seq = SPLITS[splitKey()].seq;
+  return seq[(weekOf(e) * days.length + k) % seq.length];
+}
+// ---- séances construites à partir des muscles choisis
+const UPPER = ["chest", "shoulders", "triceps", "lats", "traps", "biceps", "forearms", "lowerback"];
+const trainIndex = e => { const days = [...P.days].sort(); return weekOf(e) * days.length + days.indexOf(dowE(e)); };
+function customGroups() {
+  const sel = MUSCLES.map(m => m.id).filter(id => P.priority.includes(id));
+  if (P.days.length <= 3 || sel.length <= 4) return [sel];          // chaque séance travaille tous les muscles choisis
+  const up = sel.filter(m => UPPER.includes(m)), lo = sel.filter(m => !UPPER.includes(m));
+  if (up.length && lo.length) return [up, lo];                       // sinon : haut / bas en alternance (48 h de repos)
+  const a = [], b = []; sel.forEach((m, i) => (i % 2 ? b : a).push(m)); return [a, b];
+}
+function groupName(g) {
+  if (g.length <= 3) return g.map(muscleName).join(" + ");
+  if (g.every(m => UPPER.includes(m))) return "Haut du corps";
+  if (g.every(m => !UPPER.includes(m))) return "Bas du corps";
+  return "Tes muscles";
+}
+function planFor(e) {
+  if (!isTraining(e)) return null;
+  if (P.priority.length) {
+    const gs = customGroups(), g = gs[trainIndex(e) % gs.length];
+    let ms = g;
+    if (g.length > 6) { const st = (trainIndex(e) * 6) % g.length; ms = Array.from({ length: 6 }, (_, i) => g[(st + i) % g.length]); }
+    const n = Math.min(6, Math.max(5, ms.length));
+    return { key: "custom", name: groupName(ms), muscles: ms, slots: Array.from({ length: n }, (_, i) => [ms[i % ms.length]]) };
+  }
+  const t = sessionTypeFor(e);
+  return { key: t, name: SESSIONS[t].name, muscles: sessionMuscles(t), slots: SESSIONS[t].slots };
+}
+const planLabel = () => P.priority.length ? "tes muscles" : SPLITS[splitKey()].name.toLowerCase();
+function whyText() {
+  if (!P.priority.length) return SPLITS[splitKey()].why;
+  const gs = customGroups(), n = P.priority.length;
+  if (gs.length === 1) return `Tu as choisi ${n} muscle${n > 1 ? "s" : ""} : chaque séance ${n > 1 ? "les travaille tous" : "le travaille"}, avec plusieurs exercices différents. Garde un jour de repos entre deux séances : les coachs conseillent 48 h de récupération par muscle.`;
+  return `Tu as choisi ${n} muscles sur ${P.days.length} jours : je les répartis en deux séances qui alternent (${groupName(gs[0]).toLowerCase()} / ${groupName(gs[1]).toLowerCase()}). Chaque muscle travaille environ 2 fois par semaine, avec 48 h de repos entre deux.`;
+}
+
+const Game = {
+  xpForLevel: l => 50 * (l - 1) * l,
+  levelForXp(xp) { let l = 1; while (Game.xpForLevel(l + 1) <= xp) l++; return l; },
+  levelProgress(xp) { const l = Game.levelForXp(xp), a = Game.xpForLevel(l), b = Game.xpForLevel(l + 1); return (xp - a) / (b - a); },
+  levelTitle: l => l < 3 ? "Débutant" : l < 5 ? "Motivé" : l < 8 ? "Régulier" : l < 12 ? "Athlète" : l < 18 ? "Machine" : "Légende",
+  done: e => P.profile.history.includes(e),
+  /** Jours ratés depuis la dernière ouverture : un joker sauve un jour d'entraînement manqué. */
+  refresh(today) {
+    const p = P.profile, t = epochDay(today);
+    const wk = weekOf(t);
+    if (p.lastJokerRefillWeek !== wk) { if (p.lastJokerRefillWeek >= 0) p.jokers = Math.min(p.jokers + 1, 2); p.lastJokerRefillWeek = wk; }
+    let used = 0, lost = false;
+    const before = Game.streak(t - 1);
+    for (let e = p.lastEval + 1; e < t; e++) {
+      if (isTraining(e) && !Game.done(e)) {
+        if (p.jokers > 0) { p.jokers--; p.jokerDays.push(e); used++; } else lost = true;
+      }
+    }
+    p.lastEval = Math.max(p.lastEval, t - 1);
+    return { used, lost: lost && before > 0 ? before : 0 };
+  },
+  /** Série : jours consécutifs « tenus » (séance faite, jour de repos prévu ou joker), depuis la 1re séance. */
+  streak(t) {
+    const p = P.profile;
+    if (!p.history.length) return 0;
+    const first = Math.min(...p.history);
+    let n = 0;
+    if (Game.done(t) || (!isTraining(t) && t >= first)) n++;
+    for (let e = t - 1; e >= first; e--) {
+      if (Game.done(e) || !isTraining(e) || p.jokerDays.includes(e)) n++; else break;
+    }
+    return n;
+  },
+  workoutFor(day, mini) {
+    const e = epochDay(day), level = Game.levelForXp(P.profile.xp);
+    const plan = planFor(e), type = plan ? plan.key : null;
+    if (!type) return { type: null, name: "Récupération active", rounds: 1, minutes: 6, exercises: MOBILITY.slice(0, 4).map((m, i) => ({ ...m, muscle: null, key: "mob" + i })), maxDiff: 1, muscles: [] };
+    const g = GOALS[P.goal];
+    const maxDiff = g.maxDiff(level);
+    const withEq = EXERCISES.filter(x => x.eq === "B" || P.settings.dumbbells);
+    const all = withEq.filter(x => !P.disliked.includes(x.name));      // exercices écartés par l'utilisateur
+    const ok = all.filter(x => x.diff <= maxDiff);
+    let seed = (e * 2654435761) >>> 0;
+    const rnd = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const pickFrom = arr => arr[Math.floor(rnd() * arr.length)];
+    let slots = plan.slots.map(s => [...s]);
+    if (mini) slots = slots.slice(0, 4);
+    const used = new Set(), picked = [];
+    for (const slot of slots) {
+      const muscle = pickFrom(slot);
+      let cands = ok.filter(x => x.muscle === muscle && !used.has(x.name));
+      if (!cands.length) cands = all.filter(x => x.muscle === muscle && !used.has(x.name)).sort((a, b) => a.diff - b.diff).slice(0, 1);
+      if (!cands.length) cands = withEq.filter(x => x.muscle === muscle && !used.has(x.name)).slice(0, 1);  // dernier recours
+      if (!cands.length) continue;
+      const x = pickFrom(cands); used.add(x.name); picked.push(x);
+    }
+    const scale = g.scale * (1 + (level - 1) * 0.1);
+    const rounds = mini ? 2 : g.rounds(level);
+    const exercises = picked.map((x, i) => {
+      const v = Math.max(x.sec ? 10 : 4, Math.round(x.base * scale / (x.sec ? 5 : 1)) * (x.sec ? 5 : 1));
+      return { name: x.name, en: x.en, muscle: x.muscle, eq: x.eq, diff: x.diff, sec: x.sec ? v : 0, amount: x.sec ? `${v} s${x.suf}` : `${v}${x.suf}`, key: x.name };
+    });
+    return { type, name: plan.name, rounds, exercises, minutes: mini ? 15 : Math.round(rounds * exercises.length * 1.1 + 2), maxDiff, muscles: [...new Set(picked.map(x => x.muscle))] };
+  },
+  /** Dernière séance prévue avant aujourd'hui ratée (sans joker) ? -> message bienveillant + bonus de retour */
+  comeback(t) {
+    const p = P.profile; if (!p.history.length) return false;
+    for (let e = t - 1; e >= t - 8; e--) if (isTraining(e)) return !Game.done(e) && !p.jokerDays.includes(e) && e > Math.min(...p.history);
+    return false;
+  },
+  weekCount(t) { const w = weekOf(t); return P.profile.trainDays.filter(e => weekOf(e) === w).length; },
+  complete(day, mini) {
+    const p = P.profile, e = epochDay(day), already = Game.done(e), rest = !isTraining(e);
+    const lvl0 = Game.levelForXp(p.xp), back = !rest && !already && Game.comeback(e);
+    if (!already) p.history.push(e);
+    const st = Game.streak(e);
+    const lines = [];
+    if (rest) lines.push(["Récupération active", already ? 5 : 15]);
+    else if (already) lines.push(["Séance bonus", mini ? 10 : 25]);
+    else {
+      lines.push([mini ? "Mini séance" : "Séance complète", mini ? 30 : 50]);
+      if (st > 1) lines.push([`Série de ${st} jours`, Math.min(st * 5, 50)]);
+      if (back) lines.push(["Retour en force", 20]);
+      if (!p.trainDays.includes(e)) p.trainDays.push(e);
+      if (Game.weekCount(e) >= P.days.length && p.weekBonus !== weekOf(e)) { p.weekBonus = weekOf(e); lines.push(["Semaine complète", 40]); }
+    }
+    const gained = lines.reduce((a, l) => a + l[1], 0);
+    p.xp += gained; p.totalSessions++; p.bestStreak = Math.max(p.bestStreak, st);
+    let chest = null;
+    if (!rest && !already) { p.steps++; if (p.steps % 5 === 0) chest = p.steps / 5 - 1; }   // une marche du parcours par séance
+    const lvl = Game.levelForXp(p.xp);
+    return { gained, lines, streak: st, leveledUp: lvl > lvl0, level: lvl, chest, back };
+  },
+};
+
+// =============================================================== disponibilité & rappels
+function busyUntil(t) {
+  let end = null;
+  if (!P.settings.vacation) {
+    const m = minOfDay(t);
+    for (const b of P.recurring) if (b.days.includes(dow(t)) && m >= b.startMin && m < b.endMin) { const e = addMin(startOfDay(t), b.endMin); if (!end || e > end) end = e; }
+  }
+  for (const b of P.oneOff) if (t.getTime() >= b.start && t.getTime() < b.end) { const e = new Date(b.end); if (!end || e > end) end = e; }
+  return end;
+}
+const isBusy = t => busyUntil(t) !== null;
+function busyLabel(t) {
+  if (!P.settings.vacation) { const m = minOfDay(t); const b = P.recurring.find(b => b.days.includes(dow(t)) && m >= b.startMin && m < b.endMin); if (b) return b.label || "Indisponible"; }
+  const o = P.oneOff.find(b => t.getTime() >= b.start && t.getTime() < b.end); return o ? (o.label || "Indisponible") : "";
+}
+function firstFree(from) {
+  const d0 = startOfDay(from), ws = addMin(d0, P.settings.windowStartMin), we = addMin(d0, P.settings.windowEndMin);
+  let t = from < ws ? ws : from;
+  for (let i = 0; i < 50; i++) { if (t >= we) return null; const u = busyUntil(t); if (!u) return t; t = u; }
+  return null;
+}
+// ---- conseils santé, certains jours de repos (environ 2 sur 3), une seule fois dans la journée
+const TIPS = [
+  "Une petite marche aujourd'hui ? 20 à 30 minutes, ça fait du bien au cœur et au moral.",
+  "Pense à boire de l'eau régulièrement dans la journée, pas seulement quand tu as soif.",
+  "Sors prendre l'air quelques minutes. La lumière du jour aide aussi à mieux dormir le soir.",
+  "Assis depuis longtemps ? Lève-toi et bouge 2 minutes, ton dos te dira merci.",
+  "Jour de repos ne veut pas dire canapé toute la journée : toute activité compte, même le ménage ou les courses à pied.",
+  "Le repos fait partie de l'entraînement : c'est maintenant que tes muscles se renforcent.",
+  "Pour bien récupérer, essaie de dormir 7 à 9 heures cette nuit.",
+  "Prends les escaliers plutôt que l'ascenseur aujourd'hui. C'est du sport gratuit.",
+  "Une courte marche après le repas, c'est simple et ça fait du bien.",
+  "Étire-toi doucement 5 minutes ce soir : ça détend et ça prépare ta prochaine séance.",
+  "Pose ton téléphone 10 minutes et respire profondément. Ça compte aussi pour ta forme.",
+  "Redresse-toi : épaules en arrière, tête droite. Ta posture compte toute la journée.",
+  "Les recommandations de santé : au moins 150 minutes d'activité modérée par semaine. Une marche rapide, ça compte !",
+  "Pense aux protéines dans tes repas (œufs, poisson, légumineuses…) : elles aident tes muscles à se réparer.",
+];
+const isTipDay = e => !isTraining(e) && ((e * 7 + 3) % 3 !== 0);       // environ 2 jours de repos sur 3
+function tipFor(e) {
+  if (isTraining(e + 1) && (e % 4 === 0)) return "Demain, c'est séance ! Prépare tes affaires ce soir, ce sera plus facile de t'y mettre.";
+  return TIPS[((e * 5) % TIPS.length + TIPS.length) % TIPS.length];
+}
+function nextTip(after) {
+  if (!P.settings.tips) return null;
+  for (let off = 0; off <= 7; off++) {
+    const day = new Date(after.getFullYear(), after.getMonth(), after.getDate() + off), e = epochDay(day);
+    if (!isTipDay(e) || P.tipShown === e) continue;
+    // heure « au hasard » mais fixe pour la journée, entre 11 h et 16 h, et seulement si tu es libre
+    const base = addMin(startOfDay(day), 11 * 60 + ((e * 37) % 300));
+    let t = base;
+    const end = addMin(startOfDay(day), 20 * 60);
+    for (let i = 0; i < 30 && t < end; i++) { const u = busyUntil(t); if (!u) break; t = u; }
+    if (t >= end || t < after) continue;   // heure dépassée : le conseil du jour est déjà passé
+    return t;
+  }
+  return null;
+}
+function nextReminder(after) {
+  for (let off = 0; off <= 8; off++) {
+    const day = new Date(after.getFullYear(), after.getMonth(), after.getDate() + off), e = epochDay(day);
+    if (!isTraining(e) || Game.done(e)) continue;   // pas de rappel les jours de repos
+    if (P.remind.day === e && P.remind.count >= 4) continue;   // 4 rappels maximum par jour
+    const t = firstFree(off === 0 ? after : day);
+    if (t) return t;
+  }
+  return null;
+}
+function scheduleNext(after) {
+  if (!P.settings.remindersOn) { P.scheduled = null; return; }
+  const a = nextReminder(after), b = nextTip(after);
+  const t = a && b ? (a < b ? a : b) : (a || b);
+  P.scheduled = t ? t.getTime() : null;
+}
+function reschedule(after) { scheduleNext(after || addMin(S.now, 10)); }
+const pickMsg = (arr, salt = 0) => arr[(epochDay(S.now) + salt) % arr.length];
+function message(count, w) {
+  const n = coach().name, t = epochDay(S.now), st = Game.streak(t - 1), toChest = 5 - (P.profile.steps % 5);
+  if (count === 0) {
+    if (Game.comeback(t)) return [`${n} : on reprend ensemble ?`, "Rater une séance, ça arrive. L'important, c'est de ne pas en rater deux. Bonus de retour aujourd'hui."];
+    if (toChest === 1) return [`${n} : le coffre est à une séance`, `${w.name} aujourd'hui, et tu ouvres ton coffre.`];
+    return pickMsg([
+      [`${n} : c'est l'heure de ta séance`, `${w.name} aujourd'hui, environ ${w.minutes} min. On y va ?`],
+      [`${n} est prêt, et toi ?`, `Au programme : ${w.name.toLowerCase()}. Tu vas te sentir bien après.`],
+      [`Ta séance t'attend`, `${w.minutes} minutes pour toi. Tu ne le regretteras pas.`],
+    ]);
+  }
+  if (count === 1) return st > 0 ? [`Ta série de ${st} jours continue ?`, "Pas le temps pour tout ? La mini séance de 15 minutes compte aussi."] : [`Toujours partant ?`, "Pas le temps pour tout ? La mini séance de 15 minutes compte aussi."];
+  if (count === 2) return pickMsg([
+    [`Petit défi de ${n}`, "Pose le téléphone 15 minutes, fais la mini séance, et reprends après. Pari tenu ?"],
+    [`${n} a une idée`, "Et si tu remplaçais 15 minutes d'écran par 15 minutes de sport ? Ton futur toi dira merci."],
+  ], 1);
+  return st > 0 ? ["Dernier rappel de la journée", `Encore possible ce soir : la mini séance garde ta série de ${st} jours.`] : ["Dernier rappel de la journée", "15 minutes maintenant, et demain tu seras content de l'avoir fait."];
+}
+let lastNotif = null;
+function reminderAt(now) {
+  const today = startOfDay(now), td = epochDay(today);
+  if (P.settings.remindersOn && P.settings.tips && isTipDay(td) && P.tipShown !== td && !isBusy(now)) {
+    P.tipShown = td;
+    return { kind: "tip", ti: `Le conseil de ${coach().name}`, tx: tipFor(td), mood: "happy", pose: "wave" };
+  }
+  if (P.settings.remindersOn && isTraining(td) && !isBusy(now) && !Game.done(td)) {
+    const count = P.remind.day === td ? P.remind.count : 0;
+    const [ti, tx] = message(count, Game.workoutFor(today, count >= 1));
+    P.remind = { day: td, count: count + 1 };
+    return { kind: "remind", ti, tx, mood: "happy" };
+  }
+  return null;
+}
+function fireReminder() {
+  const now = S.now, td = epochDay(now);
+  Game.refresh(startOfDay(now));
+  const n = reminderAt(now);
+  if (n) { lastNotif = n; log(`<b>${n.kind === "tip" ? "Conseil" : "Rappel"} :</b> ${esc(n.ti)}<br>${esc(n.tx)}`); }
+  scheduleNext(addMin(now, isTraining(td) ? P.settings.repeatEveryMin : 1));
+}
+/** Appli : calcule les notifications des 8 prochains jours et les confie à Android (elles partent même appli fermée). */
+function buildSchedule() {
+  const keepR = { ...P.remind }, keepTip = P.tipShown, ev = [];
+  let after = new Date(Date.now() + 60000);
+  try {
+    for (let i = 0; i < 60; i++) {
+      const a = nextReminder(after), b = nextTip(after);
+      const t = a && b ? (a < b ? a : b) : (a || b);
+      if (!t || t.getTime() - Date.now() > 8 * 86400000) break;
+      VNOW = t.getTime();
+      const n = reminderAt(t);
+      if (n) ev.push({ at: t.getTime(), title: n.ti, text: n.tx, kind: n.kind, day: epochDay(t) });
+      after = addMin(t, isTraining(epochDay(t)) ? P.settings.repeatEveryMin : 1);
+      VNOW = null;
+    }
+  } finally { VNOW = null; P.remind = keepR; P.tipShown = keepTip; }
+  return ev;
+}
+let syncTimer = null;
+function syncNative() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    const ev = buildSchedule();
+    P.lastSchedule = ev;
+    try { localStorage.setItem("sportxp-sim-v3", JSON.stringify(P)); } catch (e) {}
+    try { NATIVE && NATIVE.schedule(JSON.stringify(ev)); } catch (e) {}
+  }, 300);
+}
+/** Appli : ce qu'Android a déjà envoyé aujourd'hui pendant que l'appli était fermée. */
+function catchUpFired() {
+  const now = Date.now(), td = epochDay(new Date());
+  const past = (P.lastSchedule || []).filter(x => x.day === td && x.at <= now);
+  const n = past.filter(x => x.kind === "remind").length;
+  if (n && !(P.remind.day === td && P.remind.count >= n)) P.remind = { day: td, count: n };
+  if (past.some(x => x.kind === "tip")) P.tipShown = td;
+}
+function advanceTo(target) {
+  lastNotif = null; let guard = 0;
+  while (P.scheduled && P.scheduled <= target.getTime() && guard++ < 300) { P.now = P.scheduled; fireReminder(); }
+  P.now = target.getTime();
+  appRefresh(false); save(); render();
+  if (lastNotif) { showNotif(lastNotif); sfx("notif"); }
+}
+function appRefresh(resched = true) {
+  if (APP) catchUpFired();
+  const r = Game.refresh(startOfDay(S.now));
+  if (r.used > 0) { S.dialog = { kind: "info", text: `Tu as raté ${r.used > 1 ? r.used + " séances" : "une séance"}, mais ${r.used > 1 ? "tes jokers ont" : "ton joker a"} sauvé ta série. Il t'en reste ${P.profile.jokers}.` }; log(`Joker utilisé (${r.used})`); }
+  if (r.lost) log(`Série perdue (${r.lost} jours)`);
+  P.oneOff = P.oneOff.filter(b => b.end > S.now.getTime());
+  if (resched) reschedule();
+}
+
+// =============================================================== dessins
+function bodySvg(view, opts = {}) {
+  const sel = opts.sel || P.priority, hl = opts.hl, click = opts.click !== false;
+  const shapes = BODIES[`${P.sex}_${view}`].map(sh => {
+    const id = sh.id;
+    if (id === "base") return `<path d="${sh.d}" fill="${opts.small ? "#DCE1EA" : "#D5DBE6"}"/>`;
+    if (id === "hair") return opts.small ? "" : `<path d="${sh.d}" fill="#3B2F2A"/>`;
+    const on = hl ? hl.includes(id) : sel.includes(id);
+    const fill = on ? "var(--flame)" : opts.small ? "#C3CBD8" : "#A9B3C4";
+    return click
+      ? `<path d="${sh.d}" fill="${fill}" stroke="#fff" stroke-width="1" data-muscle="${id}" class="mz${on ? " on" : ""}"><title>${esc(muscleName(id))}</title></path>`
+      : `<path d="${sh.d}" fill="${fill}" stroke="${opts.small ? "none" : "#fff"}" stroke-width="1"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 200 368" style="${opts.style || "width:100%;max-height:330px;display:block"}">${shapes}</svg>`;
+}
+function miniBody(muscle, h = 54) {
+  if (!muscle) return `<div style="height:${h}px;display:flex;align-items:center;justify-content:center;color:var(--mute)">${ico("moon")}</div>`;
+  const m = MUSCLES.find(x => x.id === muscle);
+  const view = m && !m.views.includes("front") ? "back" : "front";
+  return bodySvg(view, { hl: [muscle], click: false, small: true, style: `height:${h}px;width:auto;display:block` });
+}
+const diffBars = d => `<span class="diff" title="Difficulté ${d}/3">${[1,2,3].map(i => `<i class="${i <= d ? "on" : ""}"></i>`).join("")}</span>`;
+function coachBubble(text, mood = "happy", plain = false, size = 78, pose = "flex") {
+  return `<div class="coach ${plain ? "plain" : ""}"><div class="m">${mascot(size, mood, pose)}</div><div class="bub">${text}</div></div>`;
+}
+
+// =============================================================== écrans
+const screen = document.getElementById("screen");
+function render() {
+  const now = S.now;
+  const e = epochDay(now);
+  if (APP) { try { NATIVE && NATIVE.setLightStatus(!(P.onboarded && S.tab === 0 && !S.map && !S.finish && !S.chest)); } catch (er) {} }
+  if (!APP) {
+  document.getElementById("cDate").textContent = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  document.getElementById("cTime").textContent = hm(now);
+  document.getElementById("nextBox").innerHTML =
+    `Aujourd'hui : <b>${isTraining(e) ? "jour d'entraînement" : "jour de repos"}</b><br>` +
+    `Statut : <b>${isBusy(now) ? "occupé (" + esc(busyLabel(now)) + ")" : "libre"}</b><br>` +
+    (P.scheduled ? `Prochain rappel : <b>${fmtDateTime(new Date(P.scheduled))}</b>` : "Aucun rappel programmé");
+  document.getElementById("log").innerHTML = P.log.length ? P.log.map(l => `<div><span class="tm">${dayFmt(new Date(l.t))} ${hm(new Date(l.t))}</span>${l.txt}</div>`).join("") : `<div class="small">Rien pour l'instant.</div>`;
+  }
+
+  const onb = !P.onboarded;
+  const body = onb ? onboardingView() : [todayView, programView, planningView, profileView][S.tab]();
+  screen.className = "screen" + (!onb && S.tab === 0 ? " dark-top" : "");
+  const sc = document.getElementById("content")?.scrollTop || 0;
+  screen.innerHTML = `
+    <div class="status"><span>${hm(now)}</span><span>5G · 82 %</span></div>
+    <div class="notif ${S.notif ? "show" : ""}" id="notif"><div class="row" style="align-items:flex-start"><div class="nm">${mascot(42, S.notif?.mood || "happy", S.notif?.pose || "flex")}</div><div class="grow"><div class="app">SportXP · maintenant</div><div class="ti">${S.notif ? esc(S.notif.ti) : ""}</div><div class="tx">${S.notif ? esc(S.notif.tx) : ""}</div></div></div></div>
+    <div class="content" id="content">${body}</div>
+    ${onb ? "" : `<nav class="nav">${[["home","Aujourd'hui"],["dumbbell","Programme"],["calendar","Planning"],["user","Profil"]].map(([i, l], k) => `<button class="${S.tab === k ? "on" : ""}" data-tab="${k}">${ico(i)}${l}</button>`).join("")}</nav>`}
+    ${sheetView()}${dialogView()}${playerView()}${finishView()}${mapView()}${chestView()}${S.toast ? `<div class="toast" role="status">${S.toast}</div>` : ""}`;
+  if (S.keepScroll) { document.getElementById("content").scrollTop = sc; S.keepScroll = false; }
+  animateIntro();
+  animateFinish();
+  positionTour();
+  if (S.map && S.mapScroll) { const m = document.getElementById("mapsc"); if (m) { const me = m.querySelector(".mapme"); m.scrollTop = me.offsetTop - m.clientHeight / 2; } S.mapScroll = false; }
+}
+
+function todayView() {
+  const p = P.profile, today = startOfDay(S.now), e = epochDay(today), level = Game.levelForXp(p.xp);
+  const training = isTraining(e), done = Game.done(e);
+  const st = Game.streak(e);
+  const w = Game.workoutFor(today, S.mini);
+  const monday = e - (dowE(e) - 1);
+  const inL = p.xp - Game.xpForLevel(level), need = Game.xpForLevel(level + 1) - Game.xpForLevel(level);
+  const toChest = 5 - (p.steps % 5), wk = Game.weekCount(e), back = training && !done && Game.comeback(e);
+  const freshStart = training && !done && dowE(e) === 1 && p.history.length > 0;
+  const n = p.trainDays.length;
+  const line = done ? (training
+        ? pickMsg(n >= 10 ? [`${n} séances au compteur. Tu deviens quelqu'un qui fait du sport, et ça se voit.`, "Encore une de faite. C'est comme ça qu'on construit une habitude."]
+                          : [st > 1 ? `Bravo ! ${st} jours de suite. On se retrouve à la prochaine séance.` : "Séance faite, bravo ! Le plus dur, c'était de commencer.", "Bien joué. Chaque séance compte, même les petites."])
+        : "Récup faite. Tes muscles te disent merci.")
+    : !training ? (P.tipShown === e ? `Conseil du jour : ${tipFor(e)}` : "Aujourd'hui, c'est repos : tes muscles se reconstruisent. Si tu veux, 6 minutes d'étirements te rapportent un peu d'XP.")
+    : back ? "Tu as raté ta dernière séance ? Ça arrive à tout le monde. La règle : ne jamais en rater deux de suite. Aujourd'hui, bonus de retour."
+    : isBusy(S.now) ? `Tu es occupé pour l'instant. Je te ferai signe dès que tu seras libre.`
+    : freshStart ? "Nouvelle semaine, nouveau départ. On commence fort ?"
+    : toChest === 1 ? "Plus qu'une séance et tu ouvres ton coffre !"
+    : wk > 0 && P.days.length - wk === 1 ? "Encore une séance et ta semaine est complète."
+    : st > 0 ? `Ta série de ${st} jours continue si tu fais ta séance aujourd'hui.`
+    : p.history.length ? "Prêt pour ta séance ? Même la mini compte." : `Salut, c'est ${coach().name}. Prêt pour ta première séance ?`;
+  return `
+    <div class="hero">
+      <div class="top">
+        <div class="streak ${st ? "" : "cold"}">${ico("flame", "fill")}<div><div class="num">${st}</div></div><div class="lbl">jour${st > 1 ? "s" : ""}<br>de suite</div></div>
+        <div class="pills"><span class="pill xp">${ico("bolt", "fill")}${p.xp} XP</span><span class="pill jk">${ico("shield", "fill")}${p.jokers} joker${p.jokers > 1 ? "s" : ""}</span></div>
+      </div>
+      <div class="lvl"><span>Niveau ${level} · ${Game.levelTitle(level)}</span><span>${inL}/${need} XP</span></div>
+      <div class="bar"><div style="width:${Math.round(Game.levelProgress(p.xp) * 100)}%"></div></div>
+      <div class="week">${DAY_LETTERS.map((L, i) => { const d = monday + i, dn = Game.done(d), jk = p.jokerDays.includes(d), tr = isTraining(d);
+        return `<div class="wd ${d === e ? "today" : ""}">${L}<div class="dot ${dn ? "done" : jk ? "joker" : tr ? "" : "rest"}">${dn ? ico("check") : jk ? ico("shield", "fill") : ""}</div></div>`; }).join("")}</div>
+    </div>
+    ${coachBubble(line, done ? "cheer" : "happy", false, 78, done ? "cheer" : !training ? "rest" : isBusy(S.now) ? "wave" : "flex")}
+    <div class="sess">
+      ${done ? `<div class="done-banner">${ico("check")}${training ? "Séance du jour terminée" : "Récupération terminée"}</div>` : ""}
+      <div class="kind">${training ? `Séance du jour · ${P.priority.length ? "tes muscles" : "programme " + planLabel()}` : "Jour de repos"}</div>
+      <h2>${S.mini && training ? "Mini séance" : w.name}</h2>
+      <div class="meta"><span>${ico("clock")}${w.minutes} min</span><span>${ico("refresh")}${w.rounds} tour${w.rounds > 1 ? "s" : ""}</span>${training ? `<span>${diffBars(w.maxDiff)}</span>` : ""}</div>
+      ${training ? `<div class="seg"><button class="${!S.mini ? "on" : ""}" data-mini="0">Complète</button><button class="${S.mini ? "on" : ""}" data-mini="1">Mini · 15 min</button></div>` : ""}
+      ${w.exercises.map((x, i) => `<div class="exr" data-demo="${i}"><div class="mb">${miniBody(x.muscle)}</div><div class="grow"><div class="n">${esc(x.name)}</div><div class="a">${esc(x.amount)}${x.muscle ? " · " + esc(muscleName(x.muscle)) : ""}</div></div><span class="go">${ico("play", "fill")}</span></div>`).join("")}
+    </div>
+    <div class="pad" style="padding-top:0">
+      <button class="cta ${!training ? "ink" : ""}" data-act="start">${ico("play", "fill")}${done ? (training ? "Refaire une séance bonus" : "Refaire la récup") : training ? "Commencer la séance" : "Faire la récup (6 min)"}</button>
+    </div>
+    <p class="note">${P.scheduled ? `Prochain rappel ${fmtDateTime(new Date(P.scheduled))}` : training && !done ? "Aucun créneau libre aujourd'hui pour un rappel" : ""}</p>
+    <div class="goals">
+      <button class="gcard" data-act="openMap"><div class="gt">Prochain coffre</div><div class="chestrow">${Array.from({ length: 5 }, (_, i) => `<i class="${i < p.steps % 5 ? "on" : ""}"></i>`).join("")}${chestIcon(28)}</div><div class="small">${toChest === 1 ? "Plus qu'une séance" : `Encore ${toChest} séances`} · voir le parcours</div></button>
+      <div class="gcard"><div class="gt">Cette semaine</div><div class="ringw">${ringSvg(Math.min(wk, P.days.length) / P.days.length)}<b>${Math.min(wk, P.days.length)}/${P.days.length}</b></div><div class="small">${wk >= P.days.length ? "Semaine complète" : "séances"}</div></div>
+    </div>`;
+}
+
+function programView() {
+  const sk = splitKey(), today = epochDay(S.now), monday = today - (dowE(today) - 1);
+  const g = GOALS[P.goal];
+  return `<div class="pad">
+    <h1 class="t">Mon programme</h1>
+    <p class="lead">${g.name}. ${P.days.length} séance${P.days.length > 1 ? "s" : ""} par semaine, ${P.priority.length ? "sur les muscles que tu as choisis" : "en " + SPLITS[sk].name.toLowerCase()}.</p>
+    <div class="sec" style="margin-top:6px">Mes jours d'entraînement</div>
+    <div class="daybtns">${DAY_LETTERS.map((L, i) => `<button class="${P.days.includes(i + 1) ? "on" : ""}" data-tday="${i + 1}" aria-label="${DAYS_FULL[i]}">${L}</button>`).join("")}</div>
+    ${consecutiveWarning()}
+    <div class="sec">Cette semaine</div>
+    <div class="plan">${DAYS_FULL.map((n, i) => { const e = monday + i, pl = planFor(e);
+      return pl ? `<div class="pd"><b>${DAY_SHORT[i]}</b><div class="grow"><div style="font-weight:800">${esc(pl.name)}</div><div class="small">${pl.muscles.slice(0, 5).map(muscleName).join(", ")}${pl.muscles.length > 5 ? "…" : ""}</div></div>${Game.done(e) ? `<span style="color:var(--mint)">${ico("check")}</span>` : ""}</div>`
+               : `<div class="pd rest"><b>${DAY_SHORT[i]}</b><div class="grow">Repos</div></div>`; }).join("")}</div>
+    <div class="why"><b>Pourquoi ce programme ?</b><br>${whyText()}</div>
+    <div class="sec">Muscles à travailler</div>
+    <p class="small" style="margin-top:-2px">Tes séances ne travaillent que les muscles choisis. Si tu n'en choisis aucun, tu travailles tout le corps.</p>
+    <div class="seg" style="max-width:220px;margin:8px auto"><button class="${S.view === "front" ? "on" : ""}" data-view="front">Face</button><button class="${S.view === "back" ? "on" : ""}" data-view="back">Dos</button></div>
+    ${bodySvg(S.view)}
+    <p class="small" style="text-align:center;margin:6px 0 12px">${P.priority.length ? P.priority.map(muscleName).join(", ") : "Aucun muscle choisi : tout le corps"}</p>
+    <div class="card row"><div class="grow"><b>J'ai des haltères</b><div class="small">Sinon, uniquement des exercices au poids du corps</div></div><button class="switch ${P.settings.dumbbells ? "on" : ""}" data-act="dumbbells" aria-label="Haltères"></button></div>
+    ${P.disliked.length ? `<div class="sec">Exercices écartés</div><div class="card">${P.disliked.map(n => `<div class="slot" style="background:var(--chalk)"><span class="grow" style="font-weight:700">${esc(n)}</span><button class="lnk" data-undis="${esc(n)}">Remettre</button></div>`).join("")}</div>` : ""}
+    <div class="sec">Bibliothèque d'exercices</div>
+    ${[["Poussée", ["chest","shoulders","triceps"]], ["Tirage", ["lats","traps","biceps","forearms","lowerback"]], ["Jambes", ["quads","hamstrings","glutes","calves"]], ["Gainage", ["abs","obliques"]]].map(([gn, ms]) =>
+      `<div class="card"><div style="font-weight:800;font-size:16px;margin-bottom:2px">${gn}</div>${ms.flatMap(m => EXERCISES.filter(x => x.muscle === m && (x.eq === "B" || P.settings.dumbbells))).map(x =>
+        `<div class="lib ${P.disliked.includes(x.name) ? "off" : ""}" data-libdemo="${esc(x.name)}|${x.muscle}"><div style="width:24px">${miniBody(x.muscle, 42)}</div><div class="grow"><div style="font-weight:700;font-size:14px">${esc(x.name)}</div><div class="small">${muscleName(x.muscle)} · ${x.eq === "D" ? "haltères" : "poids du corps"}</div></div>${diffBars(x.diff)}</div>`).join("")}</div>`).join("")}
+  </div>`;
+}
+function consecutiveWarning() {
+  if (P.priority.length ? customGroups().length !== 1 : splitKey() !== "full") return "";
+  const d = [...P.days].sort();
+  const consec = d.some((x, i) => d.includes(x + 1) || (x === 7 && d.includes(1)));
+  return consec ? `<div class="why" style="background:#FDECEC;color:#7A1F22">${P.priority.length ? "Tes séances travaillent les mêmes muscles à chaque fois. " : ""}En corps entier, les coachs conseillent un jour de repos entre deux séances (48 h de récupération). Essaie par exemple lundi, mercredi, vendredi.</div>` : "";
+}
+
+function planningView() {
+  const s = P.settings, today = dow(S.now);
+  return `<div class="pad">
+    <h1 class="t">Mes disponibilités</h1>
+    <p class="lead">Aucun rappel ne sera envoyé pendant ces heures.</p>
+    <div class="card row"><span style="color:var(--flame)">${ico("sun")}</span><div class="grow"><b>Mode vacances</b><div class="small">Met en pause tes heures habituelles</div></div><button class="switch ${s.vacation ? "on" : ""}" data-act="vacation" aria-label="Mode vacances"></button></div>
+    <div class="sec">Chaque semaine</div>
+    ${DAYS_FULL.map((name, i) => { const d = i + 1;
+      const slots = P.recurring.filter(b => b.days.includes(d)).sort((a, b) => a.startMin - b.startMin);
+      return `<div class="card ${s.vacation ? "paused" : ""}" style="padding:12px 14px">
+        <div class="row"><b class="grow" style="font-size:15.5px">${name}${d === today ? '<span class="tag">aujourd\'hui</span>' : ""}</b><button class="lnk" data-addday="${d}">Ajouter</button></div>
+        ${slots.length ? slots.map(b => `<div class="slot"><span class="hrs">${fmtMin(b.startMin)}–${fmtMin(b.endMin)}</span><span class="grow small">${esc(b.label || "Indisponible")}</span><button class="x" data-delslot="${b.id}" data-dday="${d}" aria-label="Supprimer">${ico("x")}</button></div>`).join("") : `<div class="small" style="padding-top:4px">Libre toute la journée</div>`}
+      </div>`; }).join("")}
+    <div class="sec">Ponctuellement</div>
+    ${P.oneOff.length ? "" : `<p class="small">Rien de prévu. Ajoute un rendez-vous, une sortie…</p>`}
+    ${P.oneOff.map(b => { const a = new Date(b.start), z = new Date(b.end); return `<div class="slot" style="background:#fff;box-shadow:0 1px 0 var(--line)"><span class="hrs">${dayFmt(a)} · ${hm(a)}–${hm(z)}</span><span class="grow small">${esc(b.label || "")}</span><button class="x" data-delone="${b.id}" aria-label="Supprimer">${ico("x")}</button></div>`; }).join("")}
+    <button class="cta ghost" style="margin-top:12px" data-act="addone">${ico("plus")}Ajouter une indisponibilité</button>
+  </div>`;
+}
+
+function profileView() {
+  const s = P.settings, p = P.profile;
+  return `<div class="pad">
+    <h1 class="t">Profil</h1>
+    <div class="card row" style="margin-top:12px"><div style="width:64px">${mascot(64)}</div><div class="grow"><b style="font-size:16px">${coach().full}</b><div class="small">Niveau ${Game.levelForXp(p.xp)} · ${p.totalSessions} séance${p.totalSessions > 1 ? "s" : ""} · record ${p.bestStreak} jour${p.bestStreak > 1 ? "s" : ""}</div></div></div>
+    <div class="sec">Tenue de ${coach().name}</div>
+    ${P.profile.items.length ? `<div class="chips">${P.profile.items.map(it => `<button class="chip ${P.profile.equipped.includes(it) ? "on" : ""}" data-equip="${it}">${ITEMS[it].name}</button>`).join("")}</div>` : `<p class="small">Ouvre des coffres sur ton parcours pour débloquer des accessoires. Le premier arrive après 5 séances.</p>`}
+    <div class="sec">Coach</div>
+    <div class="chips">${Object.entries(MASCOTS).map(([k, m]) => `<button class="chip ${P.mascot === k ? "on" : ""}" data-mascot="${k}">${m.full}</button>`).join("")}</div>
+    <div class="sec">Je suis</div>
+    <div class="chips">${[["m","Un homme"],["f","Une femme"]].map(([k, l]) => `<button class="chip ${P.sex === k ? "on" : ""}" data-sex="${k}">${l}</button>`).join("")}</div>
+    <div class="sec">Mon objectif</div>
+    ${Object.entries(GOALS).map(([k, g]) => `<button class="opt ${P.goal === k ? "on" : ""}" data-goal="${k}"><span class="gl">${ico(g.icon)}</span><span class="grow"><b>${g.name}</b><span class="small">${g.desc}</span></span></button>`).join("")}
+    <div class="card row" style="margin-top:14px"><div class="grow"><b>Sons et vibrations</b><div class="small">Bruitages de fin de séance, chrono, coffres</div></div><button class="switch ${P.settings.sound ? "on" : ""}" data-act="sound" aria-label="Sons"></button></div>
+    <div class="card row"><div class="grow"><b>Conseils les jours de repos</b><div class="small">Un petit conseil santé certains jours sans séance : marcher, boire, prendre l'air…</div></div><button class="switch ${P.settings.tips ? "on" : ""}" data-act="tips" aria-label="Conseils"></button></div>
+    <div class="sec">Rappels</div>
+    <div class="card row"><div class="grow"><b>Rappels activés</b><div class="small">Seulement les jours d'entraînement, quand tu es libre</div></div><button class="switch ${s.remindersOn ? "on" : ""}" data-act="reminders" aria-label="Rappels"></button></div>
+    <div class="card"><div class="small" style="margin-bottom:6px">Plage horaire des rappels</div>
+      <div class="row fld"><input type="time" id="ws" value="${fmtMin(s.windowStartMin)}" aria-label="Début"><span class="small">à</span><input type="time" id="we" value="${fmtMin(s.windowEndMin)}" aria-label="Fin"></div>
+      <div class="small" style="margin:12px 0 6px">Relancer toutes les</div>
+      <div class="chips" style="margin:0">${[[30,"30 min"],[60,"1 h"],[90,"1 h 30"],[120,"2 h"]].map(([m, l]) => `<button class="chip ${s.repeatEveryMin === m ? "on" : ""}" data-rep="${m}">${l}</button>`).join("")}</div></div>
+    <button class="cta ghost" data-act="test">${ico("bell")}Tester une notification</button>
+    <button class="cta ghost" style="margin-top:12px" data-act="replayTour">${ico("play", "fill")}Revoir la visite guidée</button>
+    <button class="cta ghost" style="margin-top:12px;color:var(--red)" data-act="resetAll">${ico("refresh")}Recommencer depuis le début</button>
+    <div class="sec">Sur Xiaomi</div>
+    <div class="card"><div class="small" style="line-height:1.6">Pour que les rappels arrivent : active le démarrage automatique de l'appli, mets l'économiseur de batterie sur « Aucune restriction » et autorise les notifications.</div>
+      ${APP ? `<button class="cta" style="margin-top:12px;height:46px;font-size:15px" data-act="autostart">Démarrage automatique</button>
+      <button class="cta ghost" style="margin-top:10px;height:46px;font-size:15px" data-act="appSettings">Réglages de l'appli (batterie, notifications)</button>
+      ${(() => { try { return NATIVE && !NATIVE.canExact() ? `<button class="cta ghost" style="margin-top:10px;height:46px;font-size:15px" data-act="exactAlarm">Autoriser les rappels à l'heure pile</button>` : ""; } catch (er) { return ""; } })()}` : ""}</div>
+  </div>`;
+}
+
+function onboardingView() {
+  const st = P.obStep, n = coach().name, N = 6;
+  const dots = `<div class="dots">${Array.from({ length: N }, (_, i) => `<span class="${i <= st ? "on" : ""}"></span>`).join("")}</div>`;
+  const back = st > 0 ? `<button class="back" data-act="obBack">${ico("left")}Retour</button>` : "";
+  const next = (label = "Continuer", dis = false) => `<button class="cta" data-act="obNext" ${dis ? "disabled" : ""}>${label}</button>`;
+  let h = "";
+  if (st === 0) h = `<h1 class="t" style="font-size:40px">Bienvenue sur SportXP</h1><p class="lead">Choisis le coach qui va te motiver tous les jours.</p>
+    <div class="pick2">${Object.entries(MASCOTS).map(([k, m]) => `<button class="pickc ${P.mascot === k ? "on" : ""}" data-mascot="${k}">${mascotSvg(k, 112, "happy", "wave")}<b>${m.full}</b><span class="small">${m.sub}</span></button>`).join("")}</div>${next()}`;
+  else if (st === 1) return `<div class="pad">${dots}${back}${introView()}</div>`;
+  else if (st === 2) h = `${coachBubble(`Maintenant, faisons connaissance. Pour te montrer les bons muscles, dis-moi :`, "happy", true, 78, "wave")}
+    <div class="pick2">${[["m","Je suis un homme"],["f","Je suis une femme"]].map(([k, l]) => `<button class="pickc ${P.sex === k ? "on" : ""}" data-sex="${k}"><div class="sexfig">${(() => { const o = P.sex; P.sex = k; const s = bodySvg("front", { hl: [], click: false, style: "height:120px;width:auto;display:block" }); P.sex = o; return s; })()}</div><b>${l}</b></button>`).join("")}</div>${next()}`;
+  else if (st === 3) h = `${coachBubble("Où en es-tu avec le sport ? Je règle la difficulté en fonction.", "happy", true, 78, "point")}
+    ${Object.entries(GOALS).map(([k, g]) => `<button class="opt ${P.goal === k ? "on" : ""}" data-goal="${k}" data-ob="1"><span class="gl">${ico(g.icon)}</span><span class="grow"><b>${g.name}</b><span class="small">${g.desc}</span></span></button>`).join("")}<div style="height:8px"></div>${next()}`;
+  else if (st === 4) h = `${coachBubble(`Quels jours veux-tu t'entraîner ? Je te conseille ${GOALS[P.goal].days.length} jours avec du repos entre les séances.`, "happy", true, 78, "flex")}
+    <div class="daybtns">${DAY_LETTERS.map((L, i) => `<button class="${P.days.includes(i + 1) ? "on" : ""}" data-tday="${i + 1}" aria-label="${DAYS_FULL[i]}">${L}</button>`).join("")}</div>
+    <div class="card" style="margin-top:12px"><b>${P.days.length} séance${P.days.length > 1 ? "s" : ""} par semaine : ${SPLITS[splitKey()].name.toLowerCase()}</b><div class="small" style="margin-top:4px;line-height:1.5">${SPLITS[splitKey()].why}</div></div>
+    ${consecutiveWarning()}<div style="height:12px"></div>${next("Continuer", P.days.length < 2)}${P.days.length < 2 ? `<p class="note">Choisis au moins 2 jours</p>` : ""}`;
+  else h = `${coachBubble("Quels muscles veux-tu travailler ? Tes séances ne travailleront que ceux-là. Si tu passes, je fais travailler tout le corps.", "cheer", true, 78, "cheer")}
+    <div class="seg" style="max-width:220px;margin:0 auto 6px"><button class="${S.view === "front" ? "on" : ""}" data-view="front">Face</button><button class="${S.view === "back" ? "on" : ""}" data-view="back">Dos</button></div>
+    ${bodySvg(S.view)}
+    <p class="small" style="text-align:center;margin:6px 0 10px">${P.priority.length ? P.priority.map(muscleName).join(", ") : "Aucun muscle choisi : tout le corps"}</p>
+    <div class="card row"><div class="grow"><b>J'ai des haltères</b></div><button class="switch ${P.settings.dumbbells ? "on" : ""}" data-act="dumbbells" aria-label="Haltères"></button></div>
+    <button class="cta" data-act="onboardDone">${P.priority.length ? "C'est parti" : "Passer : tout le corps"}</button>`;
+  return `<div class="pad">${dots}${back}${h}</div>`;
+}
+
+// ------------------------------------------------ présentation (après le choix de la mascotte)
+const INTRO = [
+  { pos: 26, mood: "happy", flip: false, pose: "wave",
+    title: () => `Salut, moi c'est ${coach().name} !`,
+    text: "Je suis ton coach. Je t'aide à faire du sport régulièrement, même sans motivation.",
+    art: () => "" },
+  { pos: 70, mood: "happy", flip: true, pose: "point",
+    title: () => "Je te rappelle au bon moment",
+    text: "Seulement quand tu es libre. Et si tu restes sur ton téléphone, j'insiste.",
+    art: () => `<div class="art" style="left:0;right:0"><div class="mock" style="align-items:flex-start">${mascot(34, "sad", "flex")}<div><div class="small" style="font-size:11.5px">SportXP · maintenant</div><div style="font-size:14px">${coach().name} te voit… encore sur ton téléphone ?</div></div></div></div>` },
+];
+function introView() {
+  const i = P.obIntro, sl = INTRO[i];
+  const from = S.introFrom ?? sl.pos;
+  const dotsI = `<div style="display:flex;gap:6px;justify-content:center;margin:2px 0 14px">${INTRO.map((_, k) => `<span style="width:8px;height:8px;border-radius:50%;background:${k === i ? "var(--ink)" : "var(--line)"}"></span>`).join("")}</div>`;
+  return `<div class="islide">
+    <div class="stage">${sl.art()}<div class="im ${sl.flip ? "flip" : ""}" id="introM" style="--from:${from}%" data-to="${sl.pos}">${mascot(i === 0 ? 170 : 140, sl.mood, sl.pose)}</div></div>
+    ${dotsI}
+    <h2>${sl.title()}</h2><p>${sl.text}</p>
+    <button class="cta" data-act="obNext">${i < INTRO.length - 1 ? "Suivant" : "Préparer mon programme"}</button>
+    ${i < INTRO.length - 1 ? `<p class="note"><button class="lnk" data-act="skipIntro" style="color:var(--mute)">Passer la présentation</button></p>` : ""}
+  </div>`;
+}
+function animateIntro() {
+  const m = document.getElementById("introM"); if (!m) return;
+  const to = m.dataset.to;
+  requestAnimationFrame(() => requestAnimationFrame(() => { m.style.setProperty("--from", to + "%"); m.classList.add("hop"); }));
+  S.introFrom = null;
+}
+
+// ------------------------------------------------ visite guidée de l'appli
+const TOUR = [
+  { sel: ".streak", mood: "happy", text: "Ta série : les jours où tu as tenu ton programme. Le repos compte aussi." },
+  { sel: ".pills", mood: "happy", text: "Chaque séance rapporte des XP. Un joker par semaine sauve ta série si tu rates un jour." },
+  { sel: ".week", mood: "happy", text: "Cercle plein : jour d'entraînement. Pointillés : repos." },
+  { sel: ".seg", mood: "happy", text: "Pas le temps ? La mini séance de 15 minutes compte aussi." },
+  { sel: ".exr", mood: "happy", text: "Touche un exercice pour voir sa démo." },
+  { sel: "[data-tab='1']", mood: "happy", text: "Ici, tes jours d'entraînement et les muscles que tu travailles." },
+  { sel: "[data-tab='2']", mood: "happy", text: "Dis-moi quand tu es occupé : je ne te dérangerai pas." },
+  { sel: null, mood: "cheer", text: "C'est parti ! Je te fais signe au bon moment." },
+];
+function positionTour() {
+  const layer = document.getElementById("tour");
+  if (S.tour == null || !P.onboarded) { layer.hidden = true; layer.innerHTML = ""; return; }
+  // étapes sans élément visible (ex. pas de mini séance un jour de repos) : on les saute
+  while (S.tour < TOUR.length - 1 && TOUR[S.tour].sel && !screen.querySelector(TOUR[S.tour].sel)) S.tour++;
+  const step = TOUR[S.tour];
+  const first = layer.hidden || !layer.firstChild;
+  layer.hidden = false;
+  if (!layer.firstChild) layer.innerHTML = `<div class="spot none"></div><div class="tgrp"><div class="tm"></div><div class="tb"><div class="tt"></div><div class="tnav"><button class="lnk" data-tour="skip" style="color:var(--mute)">Passer</button><span class="tc"></span><button class="cta" data-tour="next"></button></div></div></div>`;
+  const spot = layer.querySelector(".spot"), grp = layer.querySelector(".tgrp");
+  const L = layer.getBoundingClientRect(), W = L.width, H = L.height;
+  const el = step.sel ? screen.querySelector(step.sel) : null;
+  let r = null;
+  if (el) {
+    const c = document.getElementById("content");
+    if (c && c.contains(el)) {
+      const er = el.getBoundingClientRect(), cr = c.getBoundingClientRect();
+      if (er.top < cr.top + 20 || er.bottom > cr.bottom - 20) c.scrollTop += er.top - cr.top - Math.max(20, (cr.height - er.height) / 3);
+    }
+    const b = el.getBoundingClientRect();
+    r = { x: b.left - L.left - 6, y: b.top - L.top - 6, w: b.width + 12, h: b.height + 12 };
+    Object.assign(spot.style, { left: r.x + "px", top: r.y + "px", width: r.w + "px", height: r.h + "px" });
+    spot.classList.remove("none");
+  } else {
+    Object.assign(spot.style, { left: W / 2 + "px", top: H / 2 + "px", width: "0px", height: "0px" });
+    spot.classList.add("none");
+  }
+  const rev = r ? (r.x + r.w / 2) < W / 2 : false;   // la mascotte se place du côté opposé et se tourne vers la zone
+  grp.classList.toggle("rev", rev);
+  const tm = grp.querySelector(".tm");
+  tm.innerHTML = mascot(84, step.mood, step.sel ? "point" : "cheer");
+  tm.classList.remove("hop"); void tm.offsetWidth; tm.classList.add("hop");
+  grp.querySelector(".tt").textContent = step.text;
+  grp.querySelector(".tc").textContent = `${S.tour + 1} / ${TOUR.length}`;
+  const last = S.tour === TOUR.length - 1;
+  grp.querySelector("[data-tour=next]").textContent = last ? "C'est parti" : "Suivant";
+  grp.querySelector("[data-tour=skip]").style.visibility = last ? "hidden" : "visible";
+  const gh = grp.offsetHeight;
+  let top;
+  if (!r) top = (H - gh) / 2;
+  else if (r.y + r.h + gh + 14 < H - 8) top = r.y + r.h + 10;
+  else if (r.y - gh - 10 > 40) top = r.y - gh - 10;
+  else top = H - gh - 90;
+  if (first) { grp.style.transition = "none"; grp.style.top = top + "px"; void grp.offsetWidth; grp.style.transition = ""; }
+  else grp.style.top = top + "px";
+}
+document.getElementById("tour").addEventListener("click", e => {
+  const b = e.target.closest("[data-tour]"); if (!b) return;
+  if (b.dataset.tour === "skip" || S.tour >= TOUR.length - 1) { S.tour = null; log("Visite guidée terminée"); save(); }
+  else S.tour++;
+  positionTour();
+});
+
+// ------------------------------------------------ parcours façon « saga »
+const chestIcon = (sz, open = false) => `<svg width="${sz}" height="${sz}" viewBox="0 0 32 32" aria-hidden="true"><rect x="4" y="13" width="24" height="15" rx="3" fill="#C9772B"/><path d="M4 ${open ? 9 : 13} Q16 ${open ? 0 : 4} 28 ${open ? 9 : 13} L28 ${open ? 11 : 15} L4 ${open ? 11 : 15} Z" fill="#E08E3A"/><rect x="4" y="17" width="24" height="3" fill="#8A4F1A"/><rect x="13.5" y="15" width="5" height="7" rx="1.5" fill="#FFC93C"/>${open ? '<path d="M10 6 l-2-3 M16 4 v-3 M22 6 l2-3" stroke="#FFC93C" stroke-width="2" stroke-linecap="round"/>' : ""}</svg>`;
+function ringSvg(frac) { const c = 2 * Math.PI * 15; return `<svg width="44" height="44" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" stroke="var(--line)" stroke-width="4" fill="none"/><circle cx="18" cy="18" r="15" stroke="var(--mint)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="${(c * frac).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 18 18)"/></svg>`; }
+function mapView() {
+  if (!S.map) return "";
+  const p = P.profile, cur = p.steps, total = Math.max(30, Math.ceil((cur + 8) / 5) * 5);
+  const W = 336, gap = 86, H = (total + 1) * gap + 120;
+  const pos = i => ({ x: W / 2 + Math.sin(i * 0.9) * 105, y: H - 70 - i * gap });
+  let path = ""; for (let i = 0; i <= total; i++) { const q = pos(i); path += (i ? " L" : "M") + q.x.toFixed(1) + " " + q.y.toFixed(1); }
+  const nodes = [];
+  for (let i = 0; i <= total; i++) {
+    const q = pos(i), chest = i > 0 && i % 5 === 0, done = i <= cur, here = i === cur;
+    const ci = i / 5 - 1, opened = chest && ci < p.chestsOpened;
+    nodes.push(`<div class="node ${done ? "done" : ""} ${chest ? "chest" : ""} ${here ? "here" : ""}" style="left:${q.x}px;top:${q.y}px">${chest ? chestIcon(34, opened) : i === 0 ? ico("flame", "fill") : `<span>${i}</span>`}</div>`);
+    if (chest) nodes.push(`<div class="nlbl" style="left:${q.x}px;top:${q.y + 30}px">${opened ? "Ouvert" : esc(rewardLabel(rewardFor(ci)))}</div>`);
+  }
+  const me = pos(cur);
+  return `<div class="mapov"><div class="maphd"><button class="close" data-act="closeMap" aria-label="Fermer">${ico("x")}</button><div class="grow"><b>Mon parcours</b><div class="small" style="color:#A9B6D3">Une marche par séance · un coffre toutes les 5</div></div></div>
+    <div class="mapsc" id="mapsc"><div class="mapin" style="height:${H}px">
+      <svg class="mappath" width="${W}" height="${H}"><path d="${path}" stroke="#2A3A60" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${path}" stroke="#3B4C74" stroke-width="3" stroke-dasharray="2 10" fill="none" stroke-linecap="round"/></svg>
+      ${nodes.join("")}
+      <div class="mapme" style="left:${me.x}px;top:${me.y - 62}px">${mascot(64, "happy", "wave")}</div>
+    </div></div></div>`;
+}
+function chestView() {
+  const c = S.chest; if (!c) return "";
+  const r = rewardFor(c.index);
+  return `<div class="finish" style="z-index:14">
+    ${c.opened ? `<div style="font-size:0">${chestIcon(96, true)}</div><div class="xp" style="font-size:44px;margin-top:6px">${esc(rewardLabel(r))}</div>
+      ${r.item ? `<div>${mascot(140, "cheer", "cheer")}</div><p>${coach().name} le porte déjà. Tu peux le retirer dans Profil.</p>` : `<p>${r.joker ? `Tu as maintenant ${P.profile.jokers} jokers.` : "Ajouté à ton total."}</p>`}
+      <button class="cta" style="margin-top:16px;max-width:280px" data-act="closeChest">Super</button>`
+    : `<p style="opacity:.8">Coffre ${c.index + 1}</p><button class="chestbtn" data-act="openChest" aria-label="Ouvrir le coffre">${chestIcon(130)}</button><p>Touche le coffre pour l'ouvrir</p>`}
+  </div>`;
+}
+
+// ------------------------------------------------ calques
+function sheetView() {
+  const x = S.sheet; if (!x) return "";
+  return `<div class="overlay" data-bg="1"><div class="sheet">
+    <div class="grab"></div>
+    <h3>${esc(x.name)}</h3>
+    <div class="small" style="margin:-4px 0 10px">${x.muscle ? esc(muscleName(x.muscle)) : "Mobilité"}${x.amount ? " · " + esc(x.amount) : ""}</div>
+    ${APP ? `<button class="video" data-act="nativeDemo" style="border:0;width:100%;cursor:pointer;font-family:inherit"><div class="play">${ico("play", "fill")}</div><div style="font-weight:800;font-size:16px">Voir la démo vidéo</div><div style="font-size:12.5px;opacity:.75">S'ouvre ici, sans quitter SportXP</div></button>` : `<div class="video">
+      <div class="play">${ico("play", "fill")}</div>
+      <div style="font-weight:700;font-size:14px;line-height:1.4">Dans l'appli, la vidéo MuscleWiki de cet exercice se lit ici, sans quitter SportXP.</div>
+      <div style="font-size:12px;opacity:.7">La simulation ne peut pas charger de vidéo externe.</div>
+    </div>`}
+    <div class="src"><span>Vidéo : MuscleWiki</span><a href="${demoUrl(x.en)}" target="_blank" rel="noopener">Voir sur MuscleWiki</a></div>
+    ${x.muscle ? `<div class="row" style="margin-top:14px"><div style="width:60px">${miniBody(x.muscle, 100)}</div><div class="grow small" style="line-height:1.5">Muscle travaillé : <b style="color:var(--ink)">${esc(muscleName(x.muscle))}</b>${x.diff ? `<br>Difficulté ${diffBars(x.diff)}` : ""}</div></div>` : ""}
+    ${x.muscle ? `<button class="cta ghost" style="margin-top:14px" data-act="dislike">${ico("x")}Je n'aime pas cet exercice</button>` : ""}
+    <button class="cta ghost" style="margin-top:10px" data-act="closeSheet">Fermer</button>
+  </div></div>`;
+}
+function dialogView() {
+  const d = S.dialog; if (!d) return "";
+  if (d.kind === "confirmReset") return `<div class="overlay center"><div class="dlg"><h3>Tout recommencer ?</h3><p style="font-weight:600;line-height:1.45">Ta série, tes XP, tes coffres et tes réglages seront effacés. Impossible de revenir en arrière.</p><div class="acts"><button class="cta ghost" data-act="closeDlg">Annuler</button><button class="cta" style="background:var(--red);box-shadow:0 4px 0 #A9282D" data-act="confirmReset">Tout effacer</button></div></div></div>`;
+  if (d.kind === "info") return `<div class="overlay center"><div class="dlg" style="text-align:center"><div>${mascot(100, "happy", "wave")}</div><p style="font-size:16px;font-weight:700;line-height:1.45">${esc(d.text)}</p><button class="cta" data-act="closeDlg">D'accord</button></div></div>`;
+  if (d.kind === "rec") {
+    const ok = d.days.length > 0 && d.end > d.start;
+    return `<div class="overlay"><div class="sheet fld"><div class="grab"></div><h3>Indisponible le ${d.dayName.toLowerCase()}</h3>
+      <div class="row"><div class="grow"><label>De</label><input type="time" id="dStart" value="${fmtMin(d.start)}"></div><div class="grow"><label>À</label><input type="time" id="dEnd" value="${fmtMin(d.end)}"></div></div>
+      <label>Raison (facultatif)</label><input type="text" id="dLabel" value="${esc(d.label)}" placeholder="Travail, cours, sport…">
+      <label>Répéter aussi le</label><div class="daybtns">${DAY_LETTERS.map((L, i) => `<button class="${d.days.includes(i + 1) ? "on" : ""}" data-day="${i + 1}" aria-label="${DAYS_FULL[i]}">${L}</button>`).join("")}</div>
+      ${d.end > d.start ? "" : `<div class="err">L'heure de fin doit être après le début.</div>`}
+      <div class="acts"><button class="cta ghost" data-act="cancel">Annuler</button><button class="cta" data-act="saveRec" ${ok ? "" : "disabled"}>Enregistrer</button></div></div></div>`;
+  }
+  const ok = d.end > d.start;
+  return `<div class="overlay"><div class="sheet fld"><div class="grab"></div><h3>Indisponibilité ponctuelle</h3>
+    <label>Date</label><input type="date" id="dDate" value="${d.date}">
+    <div class="row"><div class="grow"><label>De</label><input type="time" id="dStart" value="${fmtMin(d.start)}"></div><div class="grow"><label>À</label><input type="time" id="dEnd" value="${fmtMin(d.end)}"></div></div>
+    <label>Raison (facultatif)</label><input type="text" id="dLabel" value="${esc(d.label)}" placeholder="Rendez-vous, sortie…">
+    ${ok ? "" : `<div class="err">L'heure de fin doit être après le début.</div>`}
+    <div class="acts"><button class="cta ghost" data-act="cancel">Annuler</button><button class="cta" data-act="saveOne" ${ok ? "" : "disabled"}>Enregistrer</button></div></div></div>`;
+}
+
+// ------------------------------------------------ mode séance
+let tick = null;
+function startPlayer() {
+  const w = Game.workoutFor(startOfDay(S.now), S.mini);
+  const steps = [];
+  for (let r = 0; r < w.rounds; r++) w.exercises.forEach((x, i) => steps.push({ x, r, i }));
+  S.player = { w, steps, k: 0, phase: "work", left: null, running: false, mini: S.mini };
+  render();
+}
+function playerView() {
+  const pl = S.player; if (!pl) return "";
+  const { w, steps, k } = pl, s = steps[k];
+  const prog = `<div class="prog">${steps.map((_, i) => `<i class="${i < k || (i === k && pl.phase === "rest") ? "on" : ""}"></i>`).join("")}</div>`;
+  if (pl.phase === "rest") {
+    const nx = steps[k + 1].x, total = 30, left = pl.left ?? total, frac = left / total;
+    return `<div class="player rest"><div class="ph"><button class="close" data-act="quit" aria-label="Quitter">${ico("x")}</button>${prog}</div>
+      <div class="body"><div class="count">Récupération</div>
+        <div class="ring"><svg viewBox="0 0 100 100" width="190" height="190"><circle cx="50" cy="50" r="44" stroke="#2A3A60" stroke-width="8" fill="none"/><circle cx="50" cy="50" r="44" stroke="#FFC93C" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${(276.5 * frac).toFixed(1)} 276.5"/></svg><div class="v">${left}</div></div>
+        <div class="count">Ensuite</div><h2 style="font-size:30px;margin-top:4px">${esc(nx.name)}</h2><div class="count" style="margin-top:4px">${esc(nx.amount)}</div></div>
+      <div class="foot"><button class="cta" data-act="skipRest">Passer le repos</button></div></div>`;
+  }
+  const x = s.x, timed = x.sec > 0, left = pl.left ?? x.sec;
+  return `<div class="player"><div class="ph"><button class="close" data-act="quit" aria-label="Quitter">${ico("x")}</button>${prog}</div>
+    <div class="body">
+      <div class="count">Exercice ${s.i + 1} sur ${w.exercises.length}${w.rounds > 1 ? ` · tour ${s.r + 1} sur ${w.rounds}` : ""}</div>
+      ${cheerLine(pl) ? `<div class="pcheer">${cheerLine(pl)}</div>` : ""}
+      <div class="bigfig">${x.muscle ? miniBody(x.muscle, 210) : mascot(190, "happy", "rest")}</div>
+      <h2>${esc(x.name)}</h2>
+      <div class="amt">${timed ? `${left}<small> s</small>` : esc(x.amount.split(" ")[0])}${!timed && x.amount.includes(" ") ? `<small> ${esc(x.amount.split(" ").slice(1).join(" "))}</small>` : ""}</div>
+      ${timed && x.amount.includes("par") ? `<div class="count">${esc(x.amount.replace(/^\d+ s/, "").trim())}</div>` : ""}
+      <div class="row" style="gap:18px;margin-top:14px"><button class="lnk" data-pdemo="1">Voir la démo</button>${x.muscle ? `<button class="lnk" data-act="dislikeP" style="color:var(--mute)">Je n'aime pas</button>` : ""}</div>
+    </div>
+    <div class="foot">${timed && !pl.running && left === x.sec ? `<button class="cta" data-act="startTimer">${ico("timer")}Lancer le chrono</button>` : `<button class="cta" data-act="doneStep">${ico("check")}${k === steps.length - 1 ? "Terminer" : "C'est fait"}</button>`}</div></div>`;
+}
+function cheerLine(pl) {
+  const k = pl.k, n = pl.steps.length, s = pl.steps[k], w = pl.w;
+  if (k === n - 1) return "Dernier exercice. Donne tout !";
+  if (w.rounds > 1 && s.r === w.rounds - 1 && s.i === 0) return "Dernier tour !";
+  if (k === Math.floor(n / 2)) return "Déjà la moitié. Continue comme ça.";
+  if (k === 0) return "C'est parti. Le plus dur, c'était de commencer.";
+  return "";
+}
+function stopTick() { clearInterval(tick); tick = null; }
+function runTick(onEnd) {
+  stopTick();
+  tick = setInterval(() => {
+    if (!S.player) return stopTick();
+    S.player.left--; S.keepScroll = true;
+    if (S.player.left <= 3 && S.player.left > 0) sfx("beep");
+    if (S.player.left <= 0) { stopTick(); sfx("go"); onEnd(); } else render();
+  }, 1000);
+}
+function nextStep() {
+  const pl = S.player;
+  if (pl.k >= pl.steps.length - 1) return finishWorkout();
+  pl.phase = "rest"; pl.left = 30; pl.running = true; render();
+  runTick(() => { pl.phase = "work"; pl.k++; pl.left = null; pl.running = false; render(); });
+}
+function finishWorkout() {
+  stopTick(); 
+  const mini = S.player.mini, rest = !S.player.w.type;
+  S.player = null;
+  const r = Game.complete(startOfDay(S.now), mini);
+  log(`${rest ? "Récupération" : mini ? "Mini séance" : "Séance"} terminée : +${r.gained} XP${r.leveledUp ? `, niveau ${r.level}` : ""}`);
+  S.finish = r; reschedule(); save(); render();
+}
+function finishView() {
+  const r = S.finish; if (!r) return "";
+  const colors = ["#FF6B1A", "#FFC93C", "#22B573", "#7FB2FF", "#fff"];
+  const conf = Array.from({ length: 40 }, (_, i) => `<i class="confetti" style="left:${(i * 37) % 100}%;background:${colors[i % 5]};animation-delay:${(i % 10) * 0.08}s"></i>`).join("");
+  const p = P.profile, toChest = r.chest != null ? 0 : 5 - (p.steps % 5);
+  return `<div class="finish">${conf}
+    <div>${mascot(130, "cheer", "cheer")}</div>
+    <div class="xp" id="xpCount">+0 XP</div>
+    <div class="blines">${r.lines.map((l, i) => `<div class="bl" style="animation-delay:${0.15 + i * 0.25}s"><span>${esc(l[0])}</span><b>+${l[1]}</b></div>`).join("")}</div>
+    ${r.leveledUp ? `<div class="lvup">Niveau ${r.level} : ${Game.levelTitle(r.level)}</div>` : ""}
+    <div class="chestprog">${Array.from({ length: 5 }, (_, i) => `<i class="${r.chest != null || i < p.steps % 5 ? "on" : ""}"></i>`).join("")}${chestIcon(30, r.chest != null)}</div>
+    <p style="opacity:.85;font-size:14px;margin-top:2px">${r.chest != null ? "Coffre débloqué !" : toChest === 1 ? "Plus qu'une séance avant le coffre" : `Encore ${toChest} séances avant le coffre`}</p>
+    <button class="cta" style="margin-top:14px;max-width:280px" data-act="${r.chest != null ? "toChest" : "closeFinish"}">${r.chest != null ? "Ouvrir le coffre" : "Continuer"}</button></div>`;
+}
+function animateFinish() {
+  const el = document.getElementById("xpCount"); if (!el || !S.finish || S.finish.animated) return;
+  const r = S.finish; r.animated = true;
+  sfx("win");
+  const total = r.gained, t0 = performance.now(), dur = 900 + r.lines.length * 250;
+  let last = 0;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur), v = Math.round(total * (1 - Math.pow(1 - k, 3)));
+    const e2 = document.getElementById("xpCount"); if (!e2) return;
+    e2.textContent = `+${v} XP`;
+    if (v !== last && v % 5 === 0) sfx("tick"); last = v;
+    if (k < 1) requestAnimationFrame(step); else if (r.leveledUp) setTimeout(() => sfx("level"), 150);
+  };
+  requestAnimationFrame(step);
+}
+
+let notifTimer;
+function showNotif(n) {
+  S.notif = n; S.keepScroll = true; render();
+  clearTimeout(notifTimer); notifTimer = setTimeout(() => { S.notif = null; const el = document.getElementById("notif"); if (el) el.classList.remove("show"); }, 7000);
+}
+
+// =============================================================== événements
+function readDialogInputs() {
+  const d = S.dialog; if (!d) return; const q = id => document.getElementById(id);
+  if (q("dLabel")) d.label = q("dLabel").value;
+  if (q("dStart")) d.start = toMin(q("dStart").value);
+  if (q("dEnd")) d.end = toMin(q("dEnd").value);
+  if (q("dDate")) d.date = q("dDate").value;
+}
+screen.addEventListener("change", e => {
+  const id = e.target.id;
+  if (["dStart", "dEnd", "dDate"].includes(id)) { readDialogInputs(); S.keepScroll = true; render(); }
+  if (id === "ws" || id === "we") {
+    const ws = toMin(document.getElementById("ws").value), we = toMin(document.getElementById("we").value);
+    if (we > ws) { P.settings.windowStartMin = ws; P.settings.windowEndMin = we; reschedule(); save(); }
+    S.keepScroll = true; render();
+  }
+});
+screen.addEventListener("input", e => { if (e.target.id === "dLabel" && S.dialog) S.dialog.label = e.target.value; });
+screen.addEventListener("click", e => {
+  if (e.target.closest("a")) return;
+  if (e.target.matches("[data-bg]")) { S.sheet = null; S.keepScroll = true; return render(); }
+  const t = e.target.closest("[data-tab],[data-mini],[data-act],[data-demo],[data-libdemo],[data-pdemo],[data-view],[data-muscle],[data-mascot],[data-sex],[data-goal],[data-tday],[data-addday],[data-delslot],[data-delone],[data-rep],[data-day],[data-undis],[data-equip],#notif");
+  if (!t) return;
+  const ds = t.dataset; S.keepScroll = true;
+  if (ds.act === "start" || ds.act === "obNext" || ds.tab) sfx("tap");
+  const touch = () => { save(); render(); };
+  if (t.id === "notif") { S.notif = null; S.tab = 0; S.keepScroll = false; return render(); }
+  if (ds.tab) { S.tab = +ds.tab; S.keepScroll = false; return render(); }
+  if (ds.mini) { S.mini = ds.mini === "1"; return render(); }
+  if (ds.demo) { S.sheet = Game.workoutFor(startOfDay(S.now), S.mini).exercises[+ds.demo]; return render(); }
+  if (ds.libdemo) { const [n, m] = ds.libdemo.split("|"); const x = EXERCISES.find(z => z.name === n && z.muscle === m); S.sheet = { name: x.name, en: x.en, muscle: x.muscle, diff: x.diff }; return render(); }
+  if (ds.pdemo) { const pl = S.player; S.sheet = pl.steps[pl.k].x; return render(); }
+  if (ds.view) { S.view = ds.view; return render(); }
+  if (ds.equip) { const it = ds.equip, q = P.profile.equipped; P.profile.equipped = q.includes(it) ? q.filter(x => x !== it) : [...q, it]; sfx("tap"); return touch(); }
+  if (ds.undis) { P.disliked = P.disliked.filter(z => z !== ds.undis); log(`« ${esc(ds.undis)} » remis dans tes exercices`); return touch(); }
+  if (ds.muscle) { const m = ds.muscle; P.priority = P.priority.includes(m) ? P.priority.filter(x => x !== m) : [...P.priority, m]; return touch(); }
+  if (ds.mascot) { P.mascot = ds.mascot; return touch(); }
+  if (ds.sex) { P.sex = ds.sex; return touch(); }
+  if (ds.goal) { P.goal = ds.goal; if (!P.onboarded) P.days = [...GOALS[ds.goal].days]; return touch(); }
+  if (ds.tday) { const d = +ds.tday; P.days = P.days.includes(d) ? P.days.filter(x => x !== d) : [...P.days, d].sort(); if (P.onboarded) reschedule(); return touch(); }
+  if (ds.addday) { const d = +ds.addday; S.dialog = { kind: "rec", days: [d], dayName: DAYS_FULL[d - 1], label: "", start: 8 * 60, end: 12 * 60 }; return render(); }
+  if (ds.day) { readDialogInputs(); const d = +ds.day, a = S.dialog.days; S.dialog.days = a.includes(d) ? a.filter(x => x !== d) : [...a, d]; return render(); }
+  if (ds.delslot) { const id = +ds.delslot, d = +ds.dday; P.recurring = P.recurring.map(b => b.id === id ? { ...b, days: b.days.filter(x => x !== d) } : b).filter(b => b.days.length); reschedule(); return touch(); }
+  if (ds.delone) { P.oneOff = P.oneOff.filter(b => b.id != ds.delone); reschedule(); return touch(); }
+  if (ds.rep) { P.settings.repeatEveryMin = +ds.rep; reschedule(); return touch(); }
+  switch (ds.act) {
+    case "start": startPlayer(); break;
+    case "startTimer": { const pl = S.player; pl.running = true; pl.left = pl.steps[pl.k].x.sec; render(); runTick(() => { pl.running = false; nextStep(); }); break; }
+    case "doneStep": stopTick(); sfx("step"); nextStep(); break;
+    case "skipRest": { stopTick(); const pl = S.player; pl.phase = "work"; pl.k++; pl.left = null; pl.running = false; render(); break; }
+    case "quit": stopTick(); S.player = null; render(); break;
+    case "closeFinish": S.finish = null; S.keepScroll = false; render(); break;
+    case "toChest": S.chest = { index: S.finish.chest, opened: false }; S.finish = null; render(); break;
+    case "openChest": {
+      const c = S.chest, r = rewardFor(c.index), p = P.profile;
+      if (r.item && !p.items.includes(r.item)) { p.items.push(r.item); p.equipped.push(r.item); }
+      if (r.joker) p.jokers += r.joker;
+      if (r.xp) p.xp += r.xp;
+      p.chestsOpened = Math.max(p.chestsOpened, c.index + 1);
+      c.opened = true; sfx("chest"); log(`Coffre ${c.index + 1} ouvert : ${esc(rewardLabel(r))}`); save(); render(); break; }
+    case "closeChest": S.chest = null; render(); break;
+    case "openMap": S.map = true; S.mapScroll = true; render(); break;
+    case "closeMap": S.map = false; render(); break;
+    case "tips": P.settings.tips = !P.settings.tips; reschedule(); touch(); break;
+    case "sound": P.settings.sound = !P.settings.sound; touch(); if (P.settings.sound) sfx("step"); break;
+    case "closeSheet": S.sheet = null; render(); break;
+    case "closeDlg": S.dialog = null; render(); break;
+    case "dumbbells": P.settings.dumbbells = !P.settings.dumbbells; touch(); break;
+    case "vacation": P.settings.vacation = !P.settings.vacation; log(P.settings.vacation ? "Mode vacances activé" : "Mode vacances désactivé"); reschedule(); touch(); break;
+    case "reminders": P.settings.remindersOn = !P.settings.remindersOn; reschedule(); touch(); break;
+    case "nativeDemo": { const x = S.sheet; try { NATIVE && NATIVE.openDemo(demoUrl(x.en), x.name); } catch (er) {} break; }
+    case "appSettings": try { NATIVE && NATIVE.openAppSettings(); } catch (er) {} break;
+    case "autostart": try { NATIVE && NATIVE.openAutostart(); } catch (er) {} break;
+    case "exactAlarm": try { NATIVE && NATIVE.requestExact(); } catch (er) {} break;
+    case "test": if (NATIVE) { try { NATIVE.notify(`${coach().name} : test réussi`, "Les rappels fonctionnent. À toi de jouer !"); } catch (er) {} } else showNotif({ ti: `${coach().name} : test réussi`, tx: "Les rappels fonctionnent. À toi de jouer !", mood: "happy" }); break;
+    case "obNext":
+      if (P.obStep === 1 && P.obIntro < INTRO.length - 1) { S.introFrom = INTRO[P.obIntro].pos; P.obIntro++; S.keepScroll = false; touch(); break; }
+      if (P.obStep === 0) { P.obIntro = 0; S.introFrom = null; }
+      P.obStep = Math.min(5, P.obStep + 1); S.keepScroll = false; touch(); break;
+    case "obBack":
+      if (P.obStep === 1 && P.obIntro > 0) { S.introFrom = INTRO[P.obIntro].pos; P.obIntro--; touch(); break; }
+      P.obStep = Math.max(0, P.obStep - 1); if (P.obStep === 1) P.obIntro = INTRO.length - 1; S.keepScroll = false; touch(); break;
+    case "skipIntro": P.obStep = 2; S.keepScroll = false; touch(); break;
+    case "resetAll": if (APP) { S.dialog = { kind: "confirmReset" }; render(); } else doReset(); break;
+    case "confirmReset": S.dialog = null; doReset(); break;
+    case "dislike": case "dislikeP": {
+      const x = ds.act === "dislike" ? S.sheet : S.player.steps[S.player.k].x;
+      dislike(x.name, x.muscle); break; }
+    case "undoDislike": { const n = S.lastDisliked; P.disliked = P.disliked.filter(z => z !== n); S.toast = null; log(`« ${esc(n)} » remis dans tes exercices`); refreshPlayer(); touch(); break; }
+    case "replayTour": S.tab = 0; S.tour = 0; S.keepScroll = false; render(); break;
+    case "onboardDone": P.onboarded = true; S.tab = 0; S.keepScroll = false;
+      log(`Profil : ${coach().full}, ${P.sex === "f" ? "femme" : "homme"}, ${GOALS[P.goal].name.toLowerCase()}, ${P.days.length} jours, ${P.priority.length ? "muscles : " + P.priority.map(muscleName).join(", ") : SPLITS[splitKey()].name}`);
+      reschedule(); S.tour = 0; touch(); break;
+    case "addone": { const h = S.now.getHours(); S.dialog = { kind: "one", label: "", date: isoDate(S.now), start: Math.min(h + 1, 22) * 60, end: Math.min(h + 3, 23) * 60 }; render(); break; }
+    case "cancel": S.dialog = null; render(); break;
+    case "saveRec": { readDialogInputs(); const d = S.dialog, base = Date.now();
+      [...d.days].sort().forEach((day, i) => P.recurring.push({ id: base + i, days: [day], startMin: d.start, endMin: d.end, label: d.label.trim() }));
+      log(`Indisponible ${daysLabel(d.days)} de ${fmtMin(d.start)} à ${fmtMin(d.end)}`); S.dialog = null; reschedule(); touch(); break; }
+    case "saveOne": { readDialogInputs(); const d = S.dialog; const [y, m, dd] = d.date.split("-").map(Number); const b0 = new Date(y, m - 1, dd);
+      P.oneOff.push({ id: Date.now(), start: addMin(b0, d.start).getTime(), end: addMin(b0, d.end).getTime(), label: d.label.trim() }); P.oneOff.sort((a, b) => a.start - b.start);
+      log(`Indisponible le ${dayFmt(b0)} de ${fmtMin(d.start)} à ${fmtMin(d.end)}`); S.dialog = null; reschedule(); touch(); break; }
+  }
+});
+document.querySelector(".panel")?.addEventListener("click", e => {
+  const b = e.target.closest("[data-sim]"); if (!b) return;
+  const v = b.dataset.sim, now = S.now;
+  if (v === "60") advanceTo(addMin(now, 60));
+  else if (v === "h18") { let t = addMin(startOfDay(now), 18 * 60); if (t <= now) t = new Date(t.getTime() + 86400000); advanceTo(t); }
+  else if (v === "day") advanceTo(addMin(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), 9 * 60));
+  else if (v === "week") advanceTo(new Date(now.getTime() + 7 * 86400000));
+  else if (v === "next") { if (P.scheduled) advanceTo(new Date(P.scheduled)); else { log("Aucun rappel programmé"); save(); render(); } }
+  else if (v === "reset") doReset();
+});
+
+let toastTimer;
+function toast(html) { S.toast = html; clearTimeout(toastTimer); toastTimer = setTimeout(() => { S.toast = null; S.keepScroll = true; render(); }, 5000); }
+function refreshPlayer() {
+  const pl = S.player; if (!pl) return;
+  const w = Game.workoutFor(startOfDay(S.now), pl.mini);
+  pl.w = w; pl.steps = []; for (let r = 0; r < w.rounds; r++) w.exercises.forEach((x, i) => pl.steps.push({ x, r, i }));
+  pl.k = Math.min(pl.k, pl.steps.length - 1); pl.left = null; pl.running = false; stopTick();
+}
+function dislike(name, muscle) {
+  const before = Game.workoutFor(startOfDay(S.now), S.player ? S.player.mini : S.mini).exercises.map(z => z.name);
+  if (!P.disliked.includes(name)) P.disliked.push(name);
+  const after = Game.workoutFor(startOfDay(S.now), S.player ? S.player.mini : S.mini).exercises.map(z => z.name);
+  const repl = after.find(n => !before.includes(n));
+  S.lastDisliked = name; S.sheet = null;
+  refreshPlayer();
+  toast(`« ${esc(name)} » ne te sera plus proposé${repl ? `. Remplacé par « ${esc(repl)} »` : ""}.<button data-act="undoDislike">Annuler</button>`);
+  log(`Exercice écarté : ${esc(name)}${repl ? ` → ${esc(repl)}` : ""}`);
+  save(); S.keepScroll = true; render();
+}
+window.onBack = () => {
+  if (S.tour != null) { S.tour = null; positionTour(); return true; }
+  if (S.sheet) { S.sheet = null; render(); return true; }
+  if (S.dialog) { S.dialog = null; render(); return true; }
+  if (S.chest) { S.chest = null; render(); return true; }
+  if (S.finish) { S.finish = null; render(); return true; }
+  if (S.map) { S.map = false; render(); return true; }
+  if (S.player) { stopTick(); S.player = null; render(); return true; }
+  if (!P.onboarded && P.obStep > 0) { P.obStep--; save(); render(); return true; }
+  if (P.onboarded && S.tab !== 0) { S.tab = 0; render(); return true; }
+  return false;
+};
+window.onAppResume = () => { if (!S.player) { appRefresh(); save(); S.keepScroll = true; render(); } };
+function doReset() {
+  stopTick(); P = fresh();
+  Object.assign(S, { map: false, chest: null, tour: null, introFrom: null, tab: 0, mini: false, view: "front", notif: null, dialog: null, sheet: null, player: null, finish: null });
+  log("Simulation réinitialisée"); save(); render();
+  document.getElementById("content").scrollTop = 0; window.scrollTo(0, 0);
+}
+if (!P.log.length) log("Appli ouverte pour la première fois");
+appRefresh(); save(); render();
+})();
+</script>
+</body>
+</html>

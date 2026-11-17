@@ -9,143 +9,83 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
+import org.json.JSONArray
 
-object Availability {
-    private val zone: ZoneId get() = ZoneId.systemDefault()
+/**
+ * Les notifications sont calculées par la page (même logique que la simulation) pour les 8 jours à venir,
+ * puis confiées ici à Android, qui les envoie à l'heure prévue même si l'appli est fermée.
+ */
+object Alarms {
+    private const val PREFS = "sportxp_native"
+    private const val MAX = 60
 
-    /** Si l'instant t tombe dans un créneau indisponible, renvoie la fin de ce créneau ; sinon null. */
-    fun busyUntil(
-        t: LocalDateTime,
-        settings: Settings,
-        recurring: List<RecurringBlock>,
-        oneOff: List<OneOffBlock>,
-    ): LocalDateTime? {
-        var end: LocalDateTime? = null
-        if (!settings.vacation) {
-            val minute = t.hour * 60 + t.minute
-            for (b in recurring) {
-                if (t.dayOfWeek.value in b.days && minute >= b.startMin && minute < b.endMin) {
-                    val e = t.toLocalDate().atStartOfDay().plusMinutes(b.endMin.toLong())
-                    if (end == null || e.isAfter(end)) end = e
+    private fun pending(c: Context, i: Int, title: String?, text: String?): PendingIntent {
+        val intent = Intent(c, ReminderReceiver::class.java).setAction("com.sportxp.app.REMIND_$i")
+        if (title != null) {
+            intent.putExtra("title", title)
+            intent.putExtra("text", text ?: "")
+        }
+        return PendingIntent.getBroadcast(
+            c, 1000 + i, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    @Synchronized
+    fun replaceAll(c: Context, json: String) {
+        val prefs = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val am = c.getSystemService(AlarmManager::class.java)
+        val old = prefs.getInt("count", 0)
+        for (i in 0 until old) am.cancel(pending(c, i, null, null))
+
+        val now = System.currentTimeMillis()
+        var n = 0
+        try {
+            val arr = JSONArray(json)
+            for (i in 0 until arr.length()) {
+                if (n >= MAX) break
+                val o = arr.getJSONObject(i)
+                val at = o.getLong("at")
+                if (at <= now) continue
+                val pi = pending(c, n, o.optString("title"), o.optString("text"))
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
+                        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+                    } else {
+                        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+                    }
+                } catch (e: SecurityException) {
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
                 }
+                n++
             }
+        } catch (e: Exception) {
+            // liste invalide : on ne programme rien
         }
-        val ms = t.atZone(zone).toInstant().toEpochMilli()
-        for (b in oneOff) {
-            if (ms >= b.startMillis && ms < b.endMillis) {
-                val e = LocalDateTime.ofInstant(Instant.ofEpochMilli(b.endMillis), zone)
-                if (end == null || e.isAfter(end)) end = e
-            }
-        }
-        return end
+        prefs.edit().putInt("count", n).putString("events", json).apply()
     }
 
-    fun isBusy(t: LocalDateTime, s: Settings, r: List<RecurringBlock>, o: List<OneOffBlock>) =
-        busyUntil(t, s, r, o) != null
-
-    /** Premier moment libre >= from, dans la plage de rappel du même jour. null si aucun. */
-    fun firstFree(
-        from: LocalDateTime,
-        s: Settings,
-        r: List<RecurringBlock>,
-        o: List<OneOffBlock>,
-    ): LocalDateTime? {
-        val day = from.toLocalDate()
-        val windowStart = day.atStartOfDay().plusMinutes(s.windowStartMin.toLong())
-        val windowEnd = day.atStartOfDay().plusMinutes(s.windowEndMin.toLong())
-        var t = if (from.isBefore(windowStart)) windowStart else from
-        repeat(50) {
-            if (!t.isBefore(windowEnd)) return null
-            val until = busyUntil(t, s, r, o) ?: return t
-            t = until
-        }
-        return null
-    }
-
-    /** Prochain rappel à programmer, en sautant les jours où la séance est déjà faite. */
-    fun nextReminder(
-        after: LocalDateTime,
-        profile: Profile,
-        s: Settings,
-        r: List<RecurringBlock>,
-        o: List<OneOffBlock>,
-    ): LocalDateTime? {
-        val startDay = after.toLocalDate()
-        for (offset in 0L..7L) {
-            val day = startDay.plusDays(offset)
-            if (profile.history.contains(day.toEpochDay())) continue
-            val from = if (offset == 0L) after else day.atStartOfDay()
-            val t = firstFree(from, s, r, o)
-            if (t != null) return t
-        }
-        return null
+    /** Après un redémarrage du téléphone, les alarmes sont perdues : on les remet. */
+    fun restore(c: Context) {
+        val json = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("events", null) ?: return
+        replaceAll(c, json)
     }
 }
 
-object Reminders {
+object Notifier {
     const val CHANNEL = "rappels"
-    private const val REQ = 4242
 
     fun ensureChannel(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(CHANNEL) == null) {
-            val ch = NotificationChannel(CHANNEL, "Rappels de séance", NotificationManager.IMPORTANCE_HIGH)
-            ch.description = "Te rappelle de faire ta séance quand tu es libre"
+            val ch = NotificationChannel(CHANNEL, "Rappels et conseils", NotificationManager.IMPORTANCE_HIGH)
+            ch.description = "Rappels de séance quand tu es libre, et conseils les jours de repos"
             nm.createNotificationChannel(ch)
         }
-    }
-
-    private fun pending(c: Context): PendingIntent {
-        val i = Intent(c, ReminderReceiver::class.java)
-        return PendingIntent.getBroadcast(
-            c, REQ, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
-
-    /** Recalcule et programme le prochain rappel. Retourne l'heure programmée (ou null). */
-    fun scheduleNext(c: Context, after: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
-        val am = c.getSystemService(AlarmManager::class.java)
-        val pi = pending(c)
-        am.cancel(pi)
-        val s = Storage.loadSettings(c)
-        if (!s.remindersOn) return null
-        val next = Availability.nextReminder(
-            after, Storage.loadProfile(c), s, Storage.loadRecurring(c), Storage.loadOneOff(c)
-        ) ?: return null
-        val ms = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ms, pi)
-            } else {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ms, pi)
-            }
-        } catch (e: SecurityException) {
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ms, pi)
-        }
-        c.getSharedPreferences("sportxp", Context.MODE_PRIVATE)
-            .edit().putLong("nextReminder", ms).apply()
-        return next
-    }
-
-    fun nextScheduledMillis(c: Context): Long =
-        c.getSharedPreferences("sportxp", Context.MODE_PRIVATE).getLong("nextReminder", -1)
-
-    fun message(count: Int, streak: Int, workout: Workout): Pair<String, String> = when (count) {
-        0 -> "C'est l'heure de bouger 💪" to
-            "Ta séance du jour : ${workout.exercises.size} exercices, environ ${workout.minutes} min. On y va ?"
-        1 -> if (streak > 0) "Ta flamme 🔥 $streak attend" to "Même 5 minutes, ça compte. Lance la mini séance !"
-        else "Allez, on commence une série ? 🔥" to "Même 5 minutes, ça compte. Lance la mini séance !"
-        2 -> "Toujours sur ton tel ? 👀" to "Pose-le 5 minutes. Mini séance, chrono, et tu reprends après."
-        else -> if (streak > 0) "Dernier appel ! 🚨" to "Ta série de $streak jours va s'éteindre ce soir si tu ne fais rien."
-        else "Dernier appel de la journée 🚨" to "5 minutes maintenant, et demain tu seras content de l'avoir fait."
     }
 
     fun show(c: Context, title: String, text: String) {
@@ -154,11 +94,13 @@ object Reminders {
             ContextCompat.checkSelfPermission(c, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         val open = PendingIntent.getActivity(
-            c, 1, Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            c, 1,
+            Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val n = NotificationCompat.Builder(c, CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
+            .setColor(Color.parseColor("#FF6B1A"))
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -172,24 +114,13 @@ object Reminders {
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
-        val now = LocalDateTime.now()
-        val today = LocalDate.now()
-        val (profile, _) = Game.refresh(Storage.loadProfile(c), today)
-        val s = Storage.loadSettings(c)
-        val free = !Availability.isBusy(now, s, Storage.loadRecurring(c), Storage.loadOneOff(c))
-        if (s.remindersOn && free && !Game.doneToday(profile, today)) {
-            val count = Storage.reminderCountToday(c, today.toEpochDay())
-            val w = Game.workoutFor(Game.levelForXp(profile.xp), today, mini = count >= 1)
-            val (title, text) = Reminders.message(count, profile.streak, w)
-            Reminders.show(c, title, text)
-            Storage.incrementReminderCount(c, today.toEpochDay())
-        }
-        Reminders.scheduleNext(c, now.plusMinutes(s.repeatEveryMin.toLong()))
+        val title = intent.getStringExtra("title") ?: return
+        Notifier.show(c, title, intent.getStringExtra("text") ?: "")
     }
 }
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
-        Reminders.scheduleNext(c, LocalDateTime.now().plusMinutes(5))
+        Alarms.restore(c)
     }
 }
